@@ -64,6 +64,40 @@
 (()=>{
  const form=document.getElementById('studioForm'),prompt=document.getElementById('prompt'),discipline=document.getElementById('discipline'),taskStyle=document.getElementById('taskStyle'),status=document.getElementById('studioStatus'),output=document.getElementById('studioOutput'),actions=document.getElementById('sceneActions'),run=document.getElementById('runStudio');
  let lastScene=null;
+ async function autoRunCadTargets(scene){
+  const selected=[...document.querySelectorAll('input[name="studioTool"]:checked')].map(x=>x.value);
+  const doCascade=selected.includes('cascade')||selected.includes('opencascade');
+  const doFreeCAD=selected.includes('freecad');
+  if(!doCascade&&!doFreeCAD)return;
+  const bridge=document.getElementById('cadBridgeStatus'),cascadeButton=document.getElementById('runCascade'),stepButton=document.getElementById('buildStep');
+  const jobs=[];
+  if(doCascade)jobs.push((async()=>{
+   cascadeButton.disabled=true;cascadeButton.textContent='AI running Cascade…';
+   try{
+    const response=await fetch('/api/cascade-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scene})});
+    let data;try{data=await response.json()}catch{throw new Error('Cascade worker returned unreadable data.')}
+    if(!response.ok)throw new Error(data.error||'Cascade execution failed.');
+    output.textContent+='\n\n--- AI auto-run: Cascade Studio / OpenCascade.js ---\n'+JSON.stringify(data.result||{},null,2)+'\n\nGenerated Cascade code:\n'+(data.code||'');
+    return 'Cascade Studio/OpenCascade.js completed';
+   }catch(err){return 'Cascade Studio/OpenCascade.js not connected: '+(err&&err.message||'unknown error');}
+   finally{cascadeButton.disabled=false;cascadeButton.textContent='Run in Cascade + OpenCascade';}
+  })());
+  if(doFreeCAD)jobs.push((async()=>{
+   stepButton.disabled=true;stepButton.textContent='AI building STEP…';
+   try{
+    const response=await fetch('/api/cad-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scene})});
+    let data;try{data=await response.json()}catch{throw new Error('FreeCAD worker returned unreadable data.')}
+    if(!response.ok)throw new Error(data.error||'FreeCAD STEP generation failed.');
+    const binary=atob(data.content_base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    saveBlob(new Blob([bytes],{type:'application/step'}),data.filename||'engineering-universe.step');
+    return 'FreeCAD generated STEP for '+(data.parts||scene.objects.length)+' part(s); download started';
+   }catch(err){return 'FreeCAD not connected: '+(err&&err.message||'unknown error');}
+   finally{stepButton.disabled=false;stepButton.textContent='Build STEP with FreeCAD worker';}
+  })());
+  bridge.textContent='AI is sending the generated scene to the selected CAD engines…';
+  const results=await Promise.all(jobs);
+  bridge.textContent=results.join(' · ')+' — concept geometry only; verify before real-world use.';
+ }
  form.addEventListener('submit',async e=>{
   e.preventDefault();const task=prompt.value.trim();if(task.length<8){status.textContent='Please describe the engineering task in at least 8 characters.';return;}
   run.disabled=true;run.textContent='Working…';output.style.display='block';output.textContent='';actions.hidden=true;lastScene=null;status.textContent='Sending your prompt to the selected engineering studio…';
@@ -76,7 +110,8 @@
     output.textContent=(data.answer||'Design brief generated.')+'\n\n--- Parsed 3D scene JSON (millimetres) ---\n'+JSON.stringify(data.scene,null,2);
     actions.hidden=false;
     if(window.euRenderScene && document.querySelector('input[name="studioTool"][value="three"]:checked'))window.euRenderScene(data.scene);
-    status.textContent='Design brief and 3D concept generated. Three.js preview updated. Cascade Studio/OpenCascade.js/FreeCAD still require their separate CAD execution bridges.';
+    status.textContent='Design brief and 3D concept generated. Three.js preview updated; selected CAD engines are starting automatically.';
+    autoRunCadTargets(data.scene);
    }else{
     output.textContent=data.answer||'The AI returned no text.';
     status.textContent='Response received from '+(data.role||discipline.options[discipline.selectedIndex].text)+'. For a 3D preview, choose “Generate a simple 3D concept scene” or request a design package that includes an eu-scene block.';
