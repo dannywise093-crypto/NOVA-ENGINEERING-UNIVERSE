@@ -14,7 +14,7 @@ const PROFILES = {
 };
 const STYLES = {
  research: "Produce a research brief with scope, assumptions, evidence to locate, and credible official references or URLs to verify. Do not invent citations or claim you browsed sources.",
- design: "Produce a concept design brief: requirements, options, trade-offs, inputs still needed, and validation plan.",
+ design: "Produce a CAD-oriented concept design package with: (1) design intent and requirements, (2) a dimensioned parameter table with units and clearly marked placeholder values, (3) components and assembly layout, (4) equations and assumptions, (5) preliminary bill of materials, (6) manufacturing notes, (7) risks and verification plan, and (8) a complete editable OpenSCAD starter script in a fenced openscad code block when a geometric model is appropriate. The script must define named parameters at the top, use safe simple solids/boolean operations, include comments and avoid claiming validated engineering performance. If OpenSCAD is unsuitable for the discipline, provide the most useful structured schematic, netlist, URDF, or simulation starter instead. Clearly separate calculated values from illustrative placeholders.",
  calculate: "Give equations, define every variable and SI unit, show arithmetic only when inputs are sufficient, state assumptions and uncertainty, and include an independent-check method. Do not guess missing inputs.",
  review: "Review likely failure modes, hazards, standards to investigate, missing inputs, verification tests, and red flags. Do not certify the design.",
  code: "Give an implementation/simulation plan, safe starter code where appropriate, input validation, tests, and limitations."
