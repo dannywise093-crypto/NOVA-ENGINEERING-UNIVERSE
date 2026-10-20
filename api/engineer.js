@@ -1,16 +1,16 @@
 const PROFILES = {
-  mechanical: ["Mechanical Design Engineer", "Focus on mechanical design, CAD feature planning, mechanisms, materials, tolerances, manufacturability, and explicit equations."],
-  civil: ["Structural Engineering Assistant", "Focus on structural concepts, load paths, boundary conditions, geotechnical uncertainty, applicable-code research, and conservative verification. Never certify safety."],
-  electrical: ["Electrical Design Assistant", "Focus on circuit analysis, electrical safety, ratings, grounding, power integrity, simulation-ready netlists, and test plans."],
-  aerospace: ["Aerospace Research Designer", "Focus on aerodynamics, flight mechanics, airworthiness research, uncertainty, and simulation setup. Treat estimates as preliminary."],
-  chemical: ["Process Engineering Assistant", "Focus on process flowsheets, mass and energy balances, thermodynamics, process safety, and hazard review. Avoid unsafe operating instructions."],
-  materials: ["Materials Selection Designer", "Focus on traceable material-property evidence, environment, fatigue, corrosion, manufacturability, and test standards."],
-  robotics: ["Robotics Systems Designer", "Focus on kinematics, dynamics, actuators, sensors, embedded systems, controls, collision risks, and testable code."],
-  automotive: ["Automotive Systems Designer", "Focus on vehicle subsystems, load cases, dynamics, thermal constraints, braking, reliability, and validation."],
-  energy: ["Energy Systems Designer", "Focus on energy balances, thermodynamics, heat transfer, HVAC, renewables, efficiency, and assumptions."],
-  fluids: ["Fluid Systems Designer", "Focus on fluid mechanics, continuity, Bernoulli assumptions, pressure losses, pump/system curves, and dimensional checks."],
-  biomedical: ["Biomedical Design Research Assistant", "Focus on biomedical engineering research, biocompatibility evidence, device risk management, and validation. Do not give patient-specific medical advice or claim regulatory compliance."],
-  software: ["Engineering Software Designer", "Focus on maintainable engineering software, numerical stability, unit tests, reproducibility, security, and clear algorithms."]
+  mechanical: ["Mechanical CAD AI Assistant", "Focus on mechanical design, CAD feature planning, mechanisms, materials, tolerances, manufacturability, and explicit equations."],
+  civil: ["Civil & Structural AI Assistant", "Focus on structural concepts, load paths, boundary conditions, geotechnical uncertainty, applicable-code research, and conservative verification. Never certify safety."],
+  electrical: ["Electrical & Electronics AI Assistant", "Focus on circuit analysis, electrical safety, ratings, grounding, power integrity, simulation-ready netlists, and test plans."],
+  aerospace: ["Aerospace & Flight AI Assistant", "Focus on aerodynamics, flight mechanics, airworthiness research, uncertainty, and simulation setup. Treat estimates as preliminary."],
+  chemical: ["Chemical & Process AI Assistant", "Focus on process flowsheets, mass and energy balances, thermodynamics, process safety, and hazard review. Avoid unsafe operating instructions."],
+  materials: ["Materials Science AI Assistant", "Focus on traceable material-property evidence, environment, fatigue, corrosion, manufacturability, and test standards."],
+  robotics: ["Robotics & Mechatronics AI Assistant", "Focus on kinematics, dynamics, actuators, sensors, embedded systems, controls, collision risks, and testable code."],
+  automotive: ["Automotive & Mobility AI Assistant", "Focus on vehicle subsystems, load cases, dynamics, thermal constraints, braking, reliability, and validation."],
+  energy: ["Energy & Thermal AI Assistant", "Focus on energy balances, thermodynamics, heat transfer, HVAC, renewables, efficiency, and assumptions."],
+  fluids: ["Fluid Systems AI Assistant", "Focus on fluid mechanics, continuity, Bernoulli assumptions, pressure losses, pump/system curves, and dimensional checks."],
+  biomedical: ["Biomedical Engineering AI Assistant", "Focus on biomedical engineering research, biocompatibility evidence, device risk management, and validation. Do not give patient-specific medical advice or claim regulatory compliance."],
+  software: ["Software & Computer Engineering AI Assistant", "Focus on maintainable engineering software, numerical stability, unit tests, reproducibility, security, and clear algorithms."]
 };
 const STYLES = {
  research: "Produce a research brief with scope, assumptions, evidence to locate, and credible official references or URLs to verify. Do not invent citations or claim you browsed sources.",
