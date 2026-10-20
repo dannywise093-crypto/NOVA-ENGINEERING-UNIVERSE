@@ -471,7 +471,7 @@ const imageButton=byId("euGenerateImage");
   finally{packageButton.disabled=false;packageButton.textContent="Generate Design Package ↗"}
  });
  const loadLastAI=byId("ucLoadLastAI");
- if(loadLastAI)loadLastAI.addEventListener("click",()=>{try{const raw=localStorage.getItem("eu-ai-generated-scene");if(!raw)throw new Error("No AI-generated scene saved on this device yet. Generate a 3D model first.");const scene=JSON.parse(raw);if(typeof loadSpec!=="function")throw new Error("3D scene loader is not ready. Open Universe Creator and try again.");loadSpec(scene);status("euPackageStatus","Last AI model loaded into Universe Creator.");document.getElementById("worldStudio")?.scrollIntoView({behavior:"smooth"})}catch(e){status("euPackageStatus",e.message||"Could not load saved model.")}});
+ if(loadLastAI)loadLastAI.addEventListener("click",()=>{try{const raw=localStorage.getItem("eu-ai-generated-scene");if(!raw)throw new Error("No AI-generated scene saved on this device yet. Generate a 3D model first.");const scene=JSON.parse(raw);if(!window.EU3D||typeof window.EU3D.renderSpec!=="function")throw new Error("3D scene loader is not ready. Open Universe Creator and try again.");window.EU3D.renderSpec(scene);status("euPackageStatus","Last AI model loaded into Universe Creator.");document.getElementById("worldStudio")?.scrollIntoView({behavior:"smooth"})}catch(e){status("euPackageStatus",e.message||"Could not load saved model.")}});
  const modelButton=byId("euGenerate3D");
  if(modelButton)modelButton.addEventListener("click",async()=>{
   const task=value("euDesignTask");if(task.length<8){status("euPackageStatus","Describe the 3D concept first.");return}
