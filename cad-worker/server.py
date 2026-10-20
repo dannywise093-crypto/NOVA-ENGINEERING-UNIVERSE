@@ -1,4 +1,5 @@
 import os, json, tempfile, secrets, base64
+from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 try:
     import FreeCAD as App
@@ -10,7 +11,7 @@ try:
 except Exception:
     sync_playwright = None
 TOKEN=os.environ.get("CAD_WORKER_TOKEN","")
-HOST=os.environ.get("CAD_WORKER_HOST","127.0.0.1")
+HOST=os.environ.get("CAD_WORKER_HOST","0.0.0.0")
 PORT=int(os.environ.get("PORT",os.environ.get("CAD_WORKER_PORT","8787")) )
 ALLOWED={"box","cylinder","sphere","cone","torus"}
 CASCADE_URL=os.environ.get("CASCADE_STUDIO_URL","https://zalo.github.io/CascadeStudio/")
@@ -62,12 +63,16 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self,code,obj):
         raw=json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(raw))); self.end_headers(); self.wfile.write(raw)
     def do_GET(self):
-        if self.path=="/health":
+        path=urlsplit(self.path).path
+        if path=="/health":
             ready=bool(TOKEN and App and Part and sync_playwright)
             self.send_json(200 if ready else 503,{"ok":ready,"freecad_available":bool(App and Part),"cascade_playwright_available":bool(sync_playwright),"token_configured":bool(TOKEN)})
+        elif path=="/":
+            self.send_json(200,{"service":"Engineering Universe CAD worker","status":"running","health":"/health","endpoints":["POST /v1/build-step","POST /v1/cascade-run"]})
         else: self.send_json(404,{"error":"Not found"})
     def do_POST(self):
-        if self.path not in ("/v1/build-step","/v1/cascade-run"): return self.send_json(404,{"error":"Not found"})
+        path=urlsplit(self.path).path
+        if path not in ("/v1/build-step","/v1/cascade-run"): return self.send_json(404,{"error":"Not found"})
         if not TOKEN or not secrets.compare_digest(self.headers.get("Authorization",""),"Bearer "+TOKEN): return self.send_json(401,{"error":"Unauthorized"})
         try: length=int(self.headers.get("Content-Length","0"))
         except ValueError: return self.send_json(400,{"error":"Invalid content length"})
@@ -75,7 +80,7 @@ class Handler(BaseHTTPRequestHandler):
         doc=None
         try:
             payload=json.loads(self.rfile.read(length)); objects=payload.get("scene",{}).get("objects",[])
-            if self.path=="/v1/cascade-run":
+            if path=="/v1/cascade-run":
                 if not sync_playwright: return self.send_json(503,{"error":"Playwright is not installed. Install Playwright and Chromium on this worker."})
                 if not isinstance(objects,list) or not objects or len(objects)>30: raise ValueError("Provide 1–30 scene objects.")
                 code=make_cascade_code(objects)
