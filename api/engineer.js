@@ -21,7 +21,9 @@ const STYLES = {
 };
 function parseSceneAnswer(text) {
   if (typeof text !== "string") return null;
-  const cleaned = text.replace(/\`\`\`(?:json|eu-scene)?/gi, "").replace(/\`\`\`/g, "").trim();
+  // Prefer the labelled scene block so braces in CAD/code examples do not interfere.
+  const labelled = text.match(/```\\s*eu-scene\\s*\\n([\\s\\S]*?)\\n```/i);
+  const cleaned = (labelled ? labelled[1] : text.replace(/```(?:json|eu-scene)?/gi, "").replace(/```/g, "")).trim();
   const start = cleaned.indexOf("{");
   if (start < 0) return null;
   let depth = 0, quoted = false, escaped = false, end = -1;
@@ -46,19 +48,11 @@ function parseSceneAnswer(text) {
       const d = o.dimensions || o;
       const number = (v, fallback) => Number.isFinite(Number(v)) ? Math.max(1, Math.min(2000, Number(v))) : fallback;
       const vector = (v, fallback) => Array.isArray(v) ? [0,1,2].map(j => Number.isFinite(Number(v[j])) ? Math.max(-5000, Math.min(5000, Number(v[j]))) : fallback[j]) : fallback;
-      return {
-        name: String(o.name || (o.type + " " + (i + 1))).slice(0, 80),
-        type: o.type,
-        dimensions: { width: number(d.width, 30), height: number(d.height, 30), depth: number(d.depth, 30) },
-        position: vector(o.position, [0, i * 20, 0]),
-        rotation: vector(o.rotation, [0, 0, 0]).map(v => Math.max(-3600, Math.min(3600, v))),
-        color: /^#[0-9a-f]{6}$/i.test(String(o.color || "")) ? o.color : "#49c9f5"
-      };
+      return { name: String(o.name || (o.type + " " + (i + 1))).slice(0, 80), type: o.type, dimensions: { width: number(d.width, 30), height: number(d.height, 30), depth: number(d.depth, 30) }, position: vector(o.position, [0, i * 20, 0]), rotation: vector(o.rotation, [0, 0, 0]).map(v => Math.max(-3600, Math.min(3600, v))), color: /^#[0-9a-f]{6}$/i.test(String(o.color || "")) ? o.color : "#49c9f5" };
     });
     return objects.length ? { units: "mm", objects } : null;
   } catch { return null; }
 }
-
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -108,7 +102,8 @@ module.exports = async function handler(req, res) {
       }
       return res.status(200).json({ role, discipline, answer, scene });
     }
-    return res.status(200).json({ role, discipline, answer });
+    const scene = style === "design" ? parseSceneAnswer(answer) : null;
+    return res.status(200).json({ role, discipline, answer, ...(scene ? { scene } : {}) });
   } catch (error) {
     console.error("AI endpoint request failed", error && error.message);
     return res.status(502).json({ error: "Could not connect to the AI provider. Try again later." });
