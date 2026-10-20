@@ -352,14 +352,14 @@ function renderSpec(spec){
  const objects=Array.isArray(spec)?spec:(spec&&Array.isArray(spec.objects)?spec.objects:null);
  if(!objects||!objects.length||objects.length>40)throw new Error('Scene must contain 1–40 objects in an objects array.');
  clearModel();let count=0;
- for(const o of objects){if(!o||!['box','cylinder','sphere'].includes(o.type))continue;
+ for(const o of objects){if(!o||!['box','cylinder','sphere','cone','torus'].includes(o.type))continue;
   const dims=o.dimensions||o;const d={width:Number(dims.width)||20,height:Number(dims.height)||20,depth:Number(dims.depth)||20};
   for(const k of ['width','height','depth'])d[k]=Math.max(1,Math.min(1000,d[k]));
   const pos=Array.isArray(o.position)?o.position.slice(0,3).map(v=>Math.max(-1000,Math.min(1000,Number(v)||0))):[0,0,0];
   const rot=Array.isArray(o.rotation)?o.rotation.slice(0,3).map(v=>Number(v)||0):[0,0,0];
   addPrimitive(o.type,d,pos,rot,o.color&&/^#[0-9a-f]{6}$/i.test(o.color)?o.color:null);count++;
  }
- if(!count)throw new Error('No supported box, cylinder, or sphere objects found.');
+ if(!count)throw new Error('No supported primitive objects found.');
  const box=new THREE.Box3().setFromObject(modelRoot);const center=box.getCenter(new THREE.Vector3());modelRoot.position.sub(center);
  const size=box.getSize(new THREE.Vector3());const max=Math.max(size.x,size.y,size.z,30);controls.target.set(0,0,0);camera.position.set(max*1.5,max*1.25,max*1.65);camera.near=Math.max(.1,max/1000);camera.far=max*30;camera.updateProjectionMatrix();controls.update();
 }
