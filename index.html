@@ -233,10 +233,34 @@ function extractScene(answer){const m=answer.match(/\`\`\`(?:eu-scene|json)\s*([
 function extractCode(answer){let m=answer.match(/\`\`\`openscad\s*([\s\S]*?)\`\`\`/i);if(m)return {lang:'openscad',code:m[1].trim()};m=answer.match(/\`\`\`(python|javascript|json)\s*([\s\S]*?)\`\`\`/i);if(m)return {lang:m[1],code:m[2].trim()};return null}
 function applyScene(scene){if(!scene||!Array.isArray(scene.objects))throw new Error('Expected JSON with an objects array.');if(!window.EU3D||!window.EU3D.renderSpec)throw new Error('3D engine has not finished loading. Wait a moment and retry.');window.EU3D.renderSpec(scene);lastScene=scene;$('modelName').textContent='EDITOR SCENE / CONCEPT';$('dimensions').textContent='JSON scene • mm';log('Scene applied to 3D viewport ('+scene.objects.length+' objects). Concept only; not validated CAD.');}
 async function runAI(task){if(!task.trim())throw new Error('Add a task after ai.');log('AI request → '+task);$('euTerminalState').textContent='● AI WORKING';const res=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:'mechanical',task,style:'design'})});let data;try{data=await res.json()}catch(e){throw new Error('AI endpoint returned an unreadable response.')}if(!res.ok)throw new Error(data.error||'AI request failed');const answer=data.answer||'';log('AI RESPONSE:\n'+answer);const scene=extractScene(answer);if(scene){applyScene(scene);const json=JSON.stringify(scene,null,2);setCode(json);lang.value='json';setLanguage();log('AI scene JSON loaded into editor.')}const code=extractCode(answer);if(code){setCode(code.code);lang.value=code.lang;setLanguage();log('AI '+code.lang+' code loaded into editor. Use Download file to save it.')}lastGeneratedCode=getCode();$('euTerminalState').textContent='● READY';}
+function makePresetScene(description){
+ const q=description.toLowerCase(),objects=[];
+ const add=(type,width,height,depth,position,rotation=[0,0,0],color="#49c9f5")=>objects.push({type,dimensions:{width,height,depth},position,rotation,color});
+ if(/car|vehicle|automobile/.test(q)){
+  add("box",90,18,180,[0,18,0],[0,0,0],"#647d94");add("box",72,28,78,[0,39,-12],[0,0,0],"#4da8d8");add("box",64,5,35,[0,22,52],[0,0,0],"#f3c969");
+  for(const x of [-49,49])for(const z of [-58,58])add("cylinder",27,12,27,[x,13,z],[0,0,90],"#252d38");
+  add("box",34,8,65,[0,8,0],[0,0,0],"#65e0b5");
+ }else if(/robot|arm|manipulator/.test(q)){
+  add("box",70,12,70,[0,6,0],[0,0,0],"#647d94");add("cylinder",25,18,25,[0,21,0],[0,0,0],"#f3c969");add("box",18,62,18,[0,58,0]);add("cylinder",22,18,22,[0,91,0],[0,0,0],"#f3c969");add("box",15,55,15,[0,121,0],[0,0,0],"#4da8d8");add("cylinder",18,16,18,[0,151,0],[0,0,0],"#f3c969");add("box",12,36,12,[0,176,0]);add("box",38,12,24,[0,198,0],[0,0,0],"#71e8b7");add("box",8,22,8,[-12,211,0]);add("box",8,22,8,[12,211,0]);
+ }else if(/gearbox|gear box|transmission|gear train/.test(q)){
+  add("box",100,38,72,[0,25,0],[0,0,0],"#647d94");add("cylinder",13,64,13,[-27,46,0]);add("cylinder",18,46,18,[0,43,0],[0,0,0],"#f3c969");add("cylinder",13,64,13,[28,46,0]);add("cylinder",30,8,30,[-27,34,0],[0,0,0],"#4da8d8");add("cylinder",38,8,38,[0,34,0],[0,0,0],"#4da8d8");add("cylinder",26,8,26,[28,34,0],[0,0,0],"#4da8d8");
+ }else if(/drone|quadcopter/.test(q)){
+  add("box",28,10,28,[0,0,0],[0,0,0],"#647d94");for(const [x,z] of [[-65,-65],[65,-65],[-65,65],[65,65]]){add("box",105,5,7,[x/2,0,z/2],[0,0,Math.atan2(z,x)*180/Math.PI]);add("cylinder",32,7,32,[x,4,z],[0,0,0],"#f3c969");}
+ }else{
+  add("box",100,30,70,[0,15,0],[0,0,0],"#647d94");add("box",90,3,60,[0,31,0],[0,0,0],"#49c9f5");for(const x of [-42,42])for(const z of [-27,27])add("cylinder",5,8,5,[x,35,z],[0,0,0],"#f3c969");
+ }
+ return {units:"mm",name:description,objects};
+}
+function persistWorkspace(){localStorage.setItem("eu-active-workspace",JSON.stringify({version:1,updated:new Date().toISOString(),code:getCode(),language:lang.value,scene:lastScene}));log("Workspace saved on this device.");}
+function loadWorkspace(){const raw=localStorage.getItem("eu-active-workspace");if(!raw){log("No saved workspace found on this device.");return}try{const p=JSON.parse(raw);setCode(p.code||"");lang.value=p.language||"json";setLanguage();if(p.scene)applyScene(p.scene);log("Saved workspace loaded.")}catch(e){log("Could not load workspace: "+e.message)}}
 async function command(raw){const cmd=raw.trim();if(!cmd)return;log('> '+cmd);const low=cmd.toLowerCase();if(low==='help'){log('SUPPORTED COMMANDS\nhelp                  Show commands\nclear                 Clear terminal output\nstatus                Show editor / 3D connection status\nai <task>             Ask engineering AI; scene and code are loaded when returned\ndesign <task>         Shortcut for AI design\napply-scene           Parse JSON from editor and send objects to 3D viewport\neditor                Show editor help\n\nExamples:\nai design a gearbox concept with 3 shafts\ndesign a robot arm with 4 joints\nai create a device enclosure 100 x 60 x 25 mm\n\nThis console is not a general Linux/Termux shell.');return}
 if(low==='clear'){out.textContent='Terminal cleared. Type help for commands.';return}
 if(low==='status'){log('AI endpoint: /api/engineer\nEditor: '+(editorReady?'Monaco':'built-in fallback')+'\n3D engine: '+(window.EU3D?'ready':'loading')+'\nAI scene: '+(lastScene?'available':'none loaded'));return}
 if(low==='editor'){log('Edit the code area. Choose a language from the menu. Download file saves your work. Use JSON / Scene and Apply JSON scene to 3D for hand-authored scene geometry.');return}
+if(low==='save-project'||low==='save'){persistWorkspace();return}
+if(low==='load-project'||low==='load'){loadWorkspace();return}
+if(low==='export-stl'){if(!window.EU3D||!window.EU3D.exportSTL)throw new Error('3D engine is not ready.');window.EU3D.exportSTL();log('STL export started.');return}
+if(low.startsWith('build ')){const description=cmd.slice(6).trim();if(description.length<2)throw new Error('Describe what to build, e.g. build a four-wheel electric car');const scene=makePresetScene(description);applyScene(scene);setCode(JSON.stringify(scene,null,2));lang.value='json';setLanguage();lastGeneratedCode=getCode();log('Local concept generated for: '+description+'\\nEdit its JSON, then save-project or export-stl.');return}
 if(low==='apply-scene'){let scene;try{scene=JSON.parse(getCode())}catch(e){throw new Error('Editor text is not valid JSON. Select JSON / Scene and paste a scene object.')}applyScene(scene);return}
 if(low.startsWith('ai ')){await runAI(cmd.slice(3));return}
 if(low.startsWith('design ')){await runAI(cmd.slice(7));return}
