@@ -36,7 +36,8 @@
  <div id="sceneActions" class="row" hidden><button class="btn" id="downloadScene" type="button">Download scene JSON</button><button class="btn" id="copyScene" type="button">Copy scene JSON</button></div>
  <p class="muted" style="font-size:12px">Honest capability note: the AI can produce discipline-specific research, design packages, calculations, starter code, and a simple scene JSON. Scene JSON is not automatically injected into Cascade Studio yet, and the AI does not run FreeCAD or validated CAD/FEA/CFD simulations. Verify all engineering outputs independently.</p>
 </section>
-\n<section class="stage"><div class="stage-head"><strong>Cascade Studio · OpenCascade kernel</strong><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open full editor ↗</a></div><iframe title="Cascade Studio CAD editor" src="https://zalo.github.io/CascadeStudio/" loading="lazy" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer"></iframe></section>
+
+<section class="stage"><div class="stage-head"><strong>Cascade Studio · OpenCascade kernel</strong><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open full editor ↗</a></div><iframe title="Cascade Studio CAD editor" src="https://zalo.github.io/CascadeStudio/" loading="lazy" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer"></iframe></section>
 <section class="grid">
 <article class="card"><h2>01 · OpenCascade.js</h2><p>The geometry kernel is the foundation for precise solid operations. Cascade Studio already uses OpenCascade technology, so this avoids loading a second, competing CAD kernel into the same page.</p><a href="https://ocjs.org/" target="_blank" rel="noopener">Official docs →</a></article>
 <article class="card"><h2>02 · Cascade Studio</h2><p>Use parametric code to create solids, sketches, extrusions, revolutions, sweeps, booleans and fillets. The project documents STEP/STL/OBJ export and supported import workflows.</p><a href="https://github.com/zalo/CascadeStudio" target="_blank" rel="noopener">Source & examples →</a></article>
@@ -70,4 +71,5 @@
  document.getElementById('copyScene').addEventListener('click',async()=>{if(!lastScene)return;try{await navigator.clipboard.writeText(JSON.stringify(lastScene,null,2));status.textContent='Scene JSON copied.';}catch{status.textContent='Clipboard access was blocked by this browser. Use Download scene JSON instead.';}});
 })();
 </script>
-\n</body></html>
+
+</body></html>
