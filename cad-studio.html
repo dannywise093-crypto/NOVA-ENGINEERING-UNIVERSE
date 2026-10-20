@@ -152,9 +152,9 @@
   finally{run.disabled=false;run.textContent='Run AI studio';}
  });
  document.getElementById('clearStudio').addEventListener('click',()=>{prompt.value='';output.textContent='';output.style.display='none';status.textContent='Ready.';actions.hidden=true;lastScene=null;});
- document.getElementById('downloadScene').addEventListener('click',()=>{if(!lastScene)return;const blob=new Blob([JSON.stringify(lastScene,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='engineering-universe-scene.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+ document.getElementById('downloadScene').addEventListener('click',()=>{if(!lastScene){status.textContent='Generate a scene before downloading it.';return;}try{saveBlob(new Blob([JSON.stringify(lastScene,null,2)],{type:'application/json;charset=utf-8'}),'engineering-universe-scene.json');status.textContent='Scene JSON export started. Check your browser downloads.';}catch(err){status.textContent='Scene export failed: '+(err&&err.message||'browser blocked the download')+'. Use Copy scene JSON as a fallback.';}});
  document.getElementById('copyScene').addEventListener('click',async()=>{if(!lastScene)return;try{await navigator.clipboard.writeText(JSON.stringify(lastScene,null,2));status.textContent='Scene JSON copied.';}catch{status.textContent='Clipboard access was blocked by this browser. Use Download scene JSON instead.';}});
- function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+ function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);return true;}
  document.getElementById('downloadFreeCADMacro').addEventListener('click',()=>{
   if(!lastScene)return;
   const safe=(lastScene.objects||[]).filter(o=>['box','cylinder','sphere','cone','torus'].includes(o.type)).map(o=>({type:o.type,dimensions:o.dimensions,position:o.position,rotation:o.rotation}));
