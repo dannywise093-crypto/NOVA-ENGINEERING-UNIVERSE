@@ -33,7 +33,7 @@ Each role has a different domain prompt and workflow. These are role-specialized
 ## Configure the AI backend
 1. Import this GitHub repository into Vercel.
 2. In Vercel project **Settings → Environment Variables**, add `GROQ_API_KEY` with your private Groq API key. Never put it in `index.html`, client-side JavaScript, or GitHub.
-3. Optionally add `GROQ_MODEL` with a model name enabled for your Groq account. The default in the API route is `llama-3.3-70b-versatile`; if Groq no longer offers it to your account, set a currently supported model.
+3. Optionally add `GROQ_MODEL` with a model name enabled for your Groq account. The API route defaults to `openai/gpt-oss-20b`; you can set `GROQ_MODEL` to another model enabled for your account. The configured model must be supported by your Groq plan.
 4. Redeploy after saving environment variables.
 5. Open the site, choose an engineering studio, enter a task, and press **Ask this engineering AI**.
 
