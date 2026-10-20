@@ -19,6 +19,46 @@ const STYLES = {
  review: "Review likely failure modes, hazards, standards to investigate, missing inputs, verification tests, and red flags. Do not certify the design.",
  code: "Give an implementation/simulation plan, safe starter code where appropriate, input validation, tests, and limitations."
 };
+function parseSceneAnswer(text) {
+  if (typeof text !== "string") return null;
+  const cleaned = text.replace(/\`\`\`(?:json|eu-scene)?/gi, "").replace(/\`\`\`/g, "").trim();
+  const start = cleaned.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0, quoted = false, escaped = false, end = -1;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (ch === "\\\\") escaped = true;
+      else if (ch === '"') quoted = false;
+      continue;
+    }
+    if (ch === '"') quoted = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) { end = i + 1; break; }
+  }
+  if (end < 0) return null;
+  try {
+    const parsed = JSON.parse(cleaned.slice(start, end));
+    const input = Array.isArray(parsed) ? parsed : parsed.objects;
+    if (!Array.isArray(input)) return null;
+    const objects = input.filter(o => o && ["box", "cylinder", "sphere"].includes(o.type)).slice(0, 30).map((o, i) => {
+      const d = o.dimensions || o;
+      const number = (v, fallback) => Number.isFinite(Number(v)) ? Math.max(1, Math.min(2000, Number(v))) : fallback;
+      const vector = (v, fallback) => Array.isArray(v) ? [0,1,2].map(j => Number.isFinite(Number(v[j])) ? Math.max(-5000, Math.min(5000, Number(v[j]))) : fallback[j]) : fallback;
+      return {
+        name: String(o.name || (o.type + " " + (i + 1))).slice(0, 80),
+        type: o.type,
+        dimensions: { width: number(d.width, 30), height: number(d.height, 30), depth: number(d.depth, 30) },
+        position: vector(o.position, [0, i * 20, 0]),
+        rotation: vector(o.rotation, [0, 0, 0]).map(v => Math.max(-3600, Math.min(3600, v))),
+        color: /^#[0-9a-f]{6}$/i.test(String(o.color || "")) ? o.color : "#49c9f5"
+      };
+    });
+    return objects.length ? { units: "mm", objects } : null;
+  } catch { return null; }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -34,9 +74,14 @@ module.exports = async function handler(req, res) {
   if (task.length < 8) return res.status(400).json({ error: "Please provide a more detailed engineering task (at least 8 characters)." });
   if (task.length > 8000) return res.status(413).json({ error: "Task is too long. Keep it under 8,000 characters." });
   const [role, focus] = PROFILES[discipline];
-  const system = "You are " + role + " in Engineering Universe, a research and concept-design assistant. " + focus + "\n" +
-    "Be rigorous and honest. Ask for missing design inputs rather than silently assuming them. Clearly label assumptions, units, equations, uncertainty, and verification steps. Distinguish established facts from estimates. For research requests, name credible standards bodies, university sources, peer-reviewed literature, or official technical documentation to check and give URLs only when you know them; never fabricate sources, citations, test results, calculations, or browsing. Do not claim to run CAD, finite-element analysis, CFD, circuit simulation, or external tools unless actually connected. Never describe outputs as certified, code-compliant, safe, or production-ready without proper independent review and validated analysis. Safety-critical construction, aircraft, pressure systems, electrical installations, vehicles, and medical devices require qualified professional review. Respond in clear sections and practical next steps.";
-  const user = "Discipline: " + discipline + "\nRequested output style: " + (STYLES[style] || STYLES.research) + "\nEngineering task:\n" + task;
+  const sceneMode = style === "scene";
+  const system = sceneMode
+    ? "You generate basic 3D concept scenes for Engineering Universe. Return ONLY one valid JSON object and no markdown or prose. Schema: {\\"units\\":\\"mm\\",\\"objects\\":[{\\"name\\":\\"Base\\",\\"type\\":\\"box\\",\\"dimensions\\":{\\"width\\":80,\\"height\\":10,\\"depth\\":50},\\"position\\":[0,0,0],\\"rotation\\":[0,0,0],\\"color\\":\\"#49c9f5\\"}]}. Use 4 to 24 separate useful parts when appropriate, only box/cylinder/sphere, positive dimensions in millimetres, positions in millimetres, rotations in degrees, hex colors. Make parts visually represent the user's requested object. Include no placeholder text, no ellipses, no comments, and no fields outside the schema. This is a visual concept only, not validated CAD."
+    : "You are " + role + " in Engineering Universe, a research and concept-design assistant. " + focus + "\\n" +
+      "Be rigorous and honest. Ask for missing design inputs rather than silently assuming them. Clearly label assumptions, units, equations, uncertainty, and verification steps. Distinguish established facts from estimates. For research requests, name credible standards bodies, university sources, peer-reviewed literature, or official technical documentation to check and give URLs only when you know them; never fabricate sources, citations, test results, calculations, or browsing. Do not claim to run CAD, finite-element analysis, CFD, circuit simulation, or external tools unless actually connected. Never describe outputs as certified, code-compliant, safe, or production-ready without proper independent review and validated analysis. Safety-critical construction, aircraft, pressure systems, electrical installations, vehicles, and medical devices require qualified professional review. Respond in clear sections and practical next steps.";
+  const user = sceneMode
+    ? "Create an actual multi-part 3D scene for this request: " + task + "\\nReturn the JSON object only."
+    : "Discipline: " + discipline + "\\nRequested output style: " + (STYLES[style] || STYLES.research) + "\\nEngineering task:\\n" + task;
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -44,7 +89,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
         temperature: 0.2,
-        max_tokens: 3200,
+        max_tokens: sceneMode ? 1800 : 3200,
         messages: [{ role: "system", content: system }, { role: "user", content: user }]
       })
     });
@@ -55,6 +100,14 @@ module.exports = async function handler(req, res) {
     }
     const answer = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
     if (!answer) return res.status(502).json({ error: "The AI provider returned an empty response." });
+    if (sceneMode) {
+      const scene = parseSceneAnswer(answer);
+      if (!scene) {
+        console.error("Groq scene response was not valid scene JSON");
+        return res.status(502).json({ error: "The AI returned an invalid 3D scene. Try a shorter description, such as a small car with four wheels." });
+      }
+      return res.status(200).json({ role, discipline, answer, scene });
+    }
     return res.status(200).json({ role, discipline, answer });
   } catch (error) {
     console.error("AI endpoint request failed", error && error.message);
