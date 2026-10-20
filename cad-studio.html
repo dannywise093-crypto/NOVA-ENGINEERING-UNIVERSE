@@ -27,12 +27,22 @@
   <select id="taskStyle" style="display:block;width:100%;margin:7px 0 14px;padding:12px;border-radius:8px;background:#091321;color:#edf5ff;border:1px solid #3a5873">
    <option value="design">Design a concept + formulas + CAD starter</option><option value="scene">Generate a simple 3D concept scene</option><option value="research">Research plan and technical brief</option><option value="calculate">Engineering calculations</option><option value="review">Review risks and design assumptions</option><option value="code">Code / simulation starter</option>
   </select>
-  <label for="prompt"><strong>Your prompt</strong></label>
+
+ <label><strong>CAD tools the AI should consider</strong></label>
+ <div id="toolAccess" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin:9px 0 16px">
+  <label class="filebox"><input type="checkbox" name="studioTool" value="three" checked> <strong>Three.js</strong><br><small class="muted">Interactive 3D preview in this page</small></label>
+  <label class="filebox"><input type="checkbox" name="studioTool" value="cascade" checked> <strong>Cascade Studio</strong><br><small class="muted">Browser CAD workspace; AI-to-editor automation still needs a bridge</small></label>
+  <label class="filebox"><input type="checkbox" name="studioTool" value="opencascade" checked> <strong>OpenCascade.js</strong><br><small class="muted">Precision geometry kernel; direct integration still needs implementation</small></label>
+  <label class="filebox"><input type="checkbox" name="studioTool" value="freecad" checked> <strong>FreeCAD</strong><br><small class="muted">File/worker route; live server execution is not configured yet</small></label>
+ </div>
+\n  <label for="prompt"><strong>Your prompt</strong></label>
   <textarea id="prompt" rows="5" maxlength="8000" required placeholder="Example: Design a compact two-wheel electric trolley frame. Suggest dimensions in mm, explain the load assumptions, show the main formulas, and create a simple 3D concept." style="display:block;width:100%;margin:7px 0 12px;padding:13px;border-radius:8px;background:#091321;color:#edf5ff;border:1px solid #3a5873;resize:vertical"></textarea>
   <div class="row" style="margin-top:8px"><button class="btn primary" id="runStudio" type="submit">Run AI studio</button><button class="btn" id="clearStudio" type="button">Clear</button><a class="btn" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open CAD workspace ↗</a></div>
  </form>
  <p id="studioStatus" class="muted" role="status" aria-live="polite">Ready. Your prompt is sent to the Engineering Universe API; do not include passwords or secret keys.</p>
- <pre id="studioOutput" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:560px;overflow:auto;background:#070b11;border:1px solid #2a3b50;border-radius:9px;padding:15px;display:none"></pre>
+ 
+ <div class="stage" style="margin:14px 0"><div class="stage-head"><strong>Three.js interactive concept preview</strong><span class="muted">Drag to rotate · pinch/scroll to zoom</span></div><div id="threePreview" style="height:360px;position:relative;background:#070b11"><p id="threeStatus" class="muted" style="padding:16px">Generate a 3D concept to preview it here.</p></div></div>
+\n <pre id="studioOutput" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:560px;overflow:auto;background:#070b11;border:1px solid #2a3b50;border-radius:9px;padding:15px;display:none"></pre>
  <div id="sceneActions" class="row" hidden><button class="btn" id="downloadScene" type="button">Download scene JSON</button><button class="btn" id="copyScene" type="button">Copy scene JSON</button></div>
  <p class="muted" style="font-size:12px">Honest capability note: the AI can produce discipline-specific research, design packages, calculations, starter code, and a simple scene JSON. Scene JSON is not automatically injected into Cascade Studio yet, and the AI does not run FreeCAD or validated CAD/FEA/CFD simulations. Verify all engineering outputs independently.</p>
 </section>
@@ -72,4 +82,40 @@
 })();
 </script>
 
-</body></html>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.min.js"></script>
+<script>
+(()=> {
+ const host=document.getElementById('threePreview'),status=document.getElementById('threeStatus');
+ if(!host||!window.THREE){if(status)status.textContent='Three.js could not load. Check your connection; AI text mode can still be used.';return;}
+ const scene=new THREE.Scene();scene.background=new THREE.Color(0x070b11);
+ const camera=new THREE.PerspectiveCamera(45,1,0.1,20000);camera.position.set(180,150,220);
+ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));host.appendChild(renderer.domElement);
+ renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';renderer.domElement.style.display='block';
+ scene.add(new THREE.HemisphereLight(0xffffff,0x243247,2));
+ const light=new THREE.DirectionalLight(0xffffff,2);light.position.set(100,160,120);scene.add(light);
+ const grid=new THREE.GridHelper(400,20,0x3a647e,0x1a2c3b);scene.add(grid);
+ let modelGroup=new THREE.Group();scene.add(modelGroup);let drag=false,lastX=0,lastY=0;
+ renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);});
+ renderer.domElement.addEventListener('pointerup',()=>drag=false);
+ renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;modelGroup.rotation.y+=(e.clientX-lastX)*0.01;modelGroup.rotation.x+=(e.clientY-lastY)*0.01;lastX=e.clientX;lastY=e.clientY;});
+ renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();camera.position.multiplyScalar(e.deltaY>0?1.08:0.92);camera.position.clampLength(30,4000);},{passive:false});
+ function resize(){const w=host.clientWidth||320,h=host.clientHeight||360;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+ window.addEventListener('resize',resize);resize();
+ window.euRenderScene=function(data){
+  while(modelGroup.children.length){const o=modelGroup.children.pop();o.geometry&&o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}}
+  const objs=(data&&data.objects)||[];if(!objs.length){status.textContent='No renderable parts in this response.';return;}
+  const box=new THREE.Box3();let made=0;
+  for(const item of objs.slice(0,30)){
+   const d=item.dimensions||{},w=Math.max(1,Number(d.width)||30),h=Math.max(1,Number(d.height)||30),dep=Math.max(1,Number(d.depth)||30);
+   let geo;
+   switch(item.type){case 'cylinder':geo=new THREE.CylinderGeometry(Math.max(w,dep)/2,Math.max(w,dep)/2,h,32);break;case 'sphere':geo=new THREE.SphereGeometry(Math.max(w,h,dep)/2,24,16);break;case 'cone':geo=new THREE.ConeGeometry(Math.max(w,dep)/2,h,32);break;case 'torus':geo=new THREE.TorusGeometry(Math.max(w,dep)/2,Math.max(1,Math.min(w,h,dep)*0.12),12,32);break;default:geo=new THREE.BoxGeometry(w,h,dep);}
+   const mat=new THREE.MeshStandardMaterial({color:/^#[0-9a-f]{6}$/i.test(item.color||'')?item.color:'#49c9f5',metalness:0.25,roughness:0.55});
+   const mesh=new THREE.Mesh(geo,mat);const p=item.position||[0,0,0],r=item.rotation||[0,0,0];mesh.position.set(Number(p[0])||0,Number(p[1])||0,Number(p[2])||0);mesh.rotation.set((Number(r[0])||0)*Math.PI/180,(Number(r[1])||0)*Math.PI/180,(Number(r[2])||0)*Math.PI/180);modelGroup.add(mesh);box.expandByObject(mesh);made++;
+  }
+  const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());modelGroup.position.sub(center);const span=Math.max(size.x,size.y,size.z,30);camera.position.set(span*1.5,span*1.2,span*1.8);camera.near=Math.max(0.1,span/1000);camera.far=span*100;camera.updateProjectionMatrix();status.textContent='Rendered '+made+' concept parts with Three.js. Visual preview only; not precision CAD or simulation.';
+ };
+ function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}animate();
+})();
+</script>
+\n</body></html>
