@@ -76,6 +76,20 @@ body{background:#090d14;color:#edf3fb}
 #devStudio .dev-note{font-size:11px;color:#93a9c1;margin:10px 0 0}
 @media(max-width:800px){#devStudio .dev-grid{grid-template-columns:1fr}#euCodeEditor,#euEditorFallback{height:280px}#euTerminalOutput{height:190px}}
 
+
+/* IMAGE + ENGINEERING DESIGN PACKAGE */
+.image-design-grid{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr);gap:14px}
+.id-panel{background:#111720;border:1px solid #2a3443;border-radius:10px;padding:18px;min-width:0}
+.id-panel textarea,.id-panel input,.id-panel select{width:100%;background:#080e16;color:#eef3fb;border:1px solid #344154;border-radius:7px;padding:10px}
+.id-panel textarea{min-height:110px;resize:vertical}
+.id-preview{min-height:280px;border:1px dashed #344154;border-radius:8px;background:#090f17;display:grid;place-items:center;overflow:hidden;padding:10px}
+.id-preview img{display:block;max-width:100%;height:auto;max-height:650px;object-fit:contain}
+.id-output{white-space:pre-wrap;overflow-wrap:anywhere;background:#080e16;border:1px solid #344154;border-radius:8px;padding:13px;min-height:140px;color:#c9d9e9}
+.id-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.id-status{font-size:12px;color:#9aa8ba;margin:10px 0}
+.id-download{display:none;margin-top:10px}
+@media(max-width:800px){.image-design-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -238,6 +252,28 @@ This is a restricted engineering command console, not an Android/Linux shell.</d
 
 <section id="calculators"><div class="wrap"><div class="section-head"><div><div class="eyebrow">03 — Verify</div><h2>Engineering Calculation Center</h2></div><p>Quick calculators for common introductory mechanical engineering quantities. Check units, assumptions, and safety factors before using results in a real design.</p></div><div class="calc-grid"><div class="card calc"><div class="icon">↗</div><h3>Force</h3><p>Newton's second law: F = m × a</p><div class="field"><label>Mass (kg)</label><input id="mass" type="number" min="0" value="12"></div><div class="field"><label>Acceleration (m/s²)</label><input id="accel" type="number" value="3"></div><button class="btn primary" onclick="calcForce()">Calculate force</button><div class="result" id="forceResult">36 N</div></div><div class="card calc"><div class="icon">⟳</div><h3>Torque</h3><p>Torque = force × perpendicular radius</p><div class="field"><label>Force (N)</label><input id="force" type="number" min="0" value="100"></div><div class="field"><label>Lever arm (m)</label><input id="radius" type="number" min="0" step=".01" value=".25"></div><button class="btn primary" onclick="calcTorque()">Calculate torque</button><div class="result" id="torqueResult">25 N·m</div></div><div class="card calc"><div class="icon">▤</div><h3>Normal stress</h3><p>Average stress: σ = force / area</p><div class="field"><label>Axial force (N)</label><input id="axial" type="number" min="0" value="5000"></div><div class="field"><label>Cross-sectional area (mm²)</label><input id="area" type="number" min="0" step=".1" value="100"></div><button class="btn primary" onclick="calcStress()">Calculate stress</button><div class="result" id="stressResult">50 MPa</div></div></div><p class="note" style="margin-top:14px">These calculators are educational aids. They do not check buckling, fatigue, temperature, material variability, manufacturing tolerances, or applicable codes.</p></div></section>
 <section id="library"><div class="wrap"><div class="section-head"><div><div class="eyebrow">04 — Keep building</div><h2>Project Library</h2></div><p>Keep research briefs, model settings, and checklists saved locally in this browser. Export or back up important work regularly.</p></div><div class="actions" style="margin:0 0 18px"><button class="btn" id="exportLibrary">Export library JSON</button><button class="btn" id="clearLibrary">Clear local library</button></div><div class="library-list" id="libraryList"><div class="saved"><b>No saved projects yet</b><small>Save a brief or model to begin.</small></div></div></div></section>
+
+<section id="engineeringAI"><div class="wrap">
+ <div class="section-head"><div><div class="eyebrow">03 — Generate</div><h2>Engineering Formula & Design AI</h2></div><p>Create concept images, engineering design packages with formulas and dimensions, simple 3-view technical drawings, and editable 3D concept models. These are preliminary outputs and need engineering verification.</p></div>
+ <div class="image-design-grid">
+  <div class="id-panel"><div class="badge">AI IMAGE GENERATOR</div><h3>Generate a design image</h3>
+   <label for="euImagePrompt">Describe the image or engineering concept</label><textarea id="euImagePrompt" placeholder="Example: a compact electric vehicle gearbox, studio product render, three-quarter view, visible casing and shafts"></textarea>
+   <div class="id-row"><div><label for="euImageWidth">Width</label><select id="euImageWidth"><option value="768">768 px</option><option value="1024" selected>1024 px</option></select></div><div><label for="euImageHeight">Height</label><select id="euImageHeight"><option value="768">768 px</option><option value="1024" selected>1024 px</option></select></div><div><label for="euImageStyle">Style</label><select id="euImageStyle"><option value="technical product render">Product render</option><option value="engineering concept sketch">Concept sketch</option><option value="blueprint technical illustration">Blueprint</option><option value="photorealistic industrial design">Photorealistic</option></select></div></div>
+   <div class="actions"><button class="btn primary" id="euGenerateImage">Generate Image ↗</button></div><div class="id-status" id="euImageStatus">Configure POLLINATIONS_API_KEY in Vercel to enable AI image generation.</div>
+  </div>
+  <div class="id-panel"><div class="badge">GENERATED IMAGE</div><h3>Image preview</h3><div class="id-preview" id="euImagePreview"><span class="note">Your generated image will appear here.</span></div><a class="btn id-download" id="euImageDownload" download="engineering-concept.png">Download image ↓</a></div>
+  <div class="id-panel"><div class="badge">FORMULAS + DIMENSIONS + 3D</div><h3>Engineering design package</h3>
+   <label for="euDesignTask">What should the AI design?</label><textarea id="euDesignTask" placeholder="Example: design a small belt-driven gearbox. Explain the design, list dimensions and materials, show equations and assumptions, and create a simple 3D concept."></textarea>
+   <div class="actions"><button class="btn primary" id="euGeneratePackage">Generate Design Package ↗</button><button class="btn" id="euGenerate3D">Generate 3D Model</button></div>
+   <div class="id-status" id="euPackageStatus">Uses the existing Groq-backed engineering endpoint.</div><div class="id-output" id="euPackageOutput">Your formulas, parameter table, design notes, and starter CAD code will appear here.</div>
+  </div>
+  <div class="id-panel"><div class="badge">TECHNICAL DRAWING</div><h3>Generate a dimensioned 3-view drawing</h3><p class="note">Creates an editable/downloadable SVG drawing for a simple rectangular part from your dimensions.</p>
+   <div class="id-row"><div><label for="euDimW">Width (mm)</label><input id="euDimW" type="number" min="1" max="2000" value="100"></div><div><label for="euDimH">Height (mm)</label><input id="euDimH" type="number" min="1" max="2000" value="60"></div><div><label for="euDimD">Depth (mm)</label><input id="euDimD" type="number" min="1" max="2000" value="40"></div></div>
+   <div class="actions"><button class="btn primary" id="euDrawTechnical">Create Drawing</button><a class="btn id-download" id="euDrawingDownload" download="engineering-technical-drawing.svg">Download SVG ↓</a></div><div class="id-preview" id="euDrawingPreview"><span class="note">Your drawing will appear here.</span></div>
+  </div>
+ </div><p class="note" style="margin-top:14px">Important: AI-generated images are illustrations, not dimensionally accurate CAD. The 3-view drawing is a simple rectangular-part template. Verify formulas, dimensions, tolerances, loads, materials, and safety with appropriate engineering tools and a qualified reviewer.</p>
+</div></section>
+
 </main>
 <footer><div class="wrap foot"><div><b>ENGINEERING UNIVERSE</b><br>Research • Design • Calculate</div><div>Prototype platform v0.1 · Mobile-first</div><div>AI backend and professional CAD/simulation integrations are not connected yet.</div></div></footer>
 <script>
@@ -396,5 +432,52 @@ $('euEditorCopy').addEventListener('click',async()=>{try{await navigator.clipboa
 $('euEditorDownload').addEventListener('click',()=>{const ext={openscad:'scad',python:'py',javascript:'js',json:'json'}[lang.value]||'txt';const blob=new Blob([getCode()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='engineering-universe-design.'+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);log('Downloaded engineering-universe-design.'+ext)});
 $('euEditorLoad').addEventListener('click',()=>{if(!lastGeneratedCode){log('No AI-generated code yet. Run: ai design <your task>');return}setCode(lastGeneratedCode);log('Last generated code loaded into editor.')});
 })();
+
+/* Engineering image, package, and drawing tools */
+(function(){
+ const byId=id=>document.getElementById(id);
+ const status=(id,msg)=>{const e=byId(id);if(e)e.textContent=msg};
+ const value=id=>byId(id)&&byId(id).value?byId(id).value.trim():"";
+ const imageButton=byId("euGenerateImage");
+ if(imageButton)imageButton.addEventListener("click",async()=>{
+  const prompt=value("euImagePrompt");
+  if(prompt.length<8){status("euImageStatus","Please describe the image in more detail.");return}
+  imageButton.disabled=true;imageButton.textContent="Generating…";status("euImageStatus","Requesting image. This can take a minute; keep this page open.");
+  byId("euImagePreview").innerHTML='<span class="note">Generating image…</span>';byId("euImageDownload").style.display="none";
+  try{
+   const res=await fetch("/api/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:prompt+", "+value("euImageStyle")+", engineering concept illustration; clear composition",width:Number(byId("euImageWidth").value),height:Number(byId("euImageHeight").value)})});
+   const type=res.headers.get("content-type")||"";
+   if(!res.ok||!type.startsWith("image/")){let msg="Image generation failed. Check POLLINATIONS_API_KEY in Vercel.";try{const d=await res.json();if(d.error)msg=d.error}catch{}throw new Error(msg)}
+   const blob=await res.blob(),url=URL.createObjectURL(blob),img=document.createElement("img");img.alt="AI-generated engineering concept";img.src=url;
+   byId("euImagePreview").replaceChildren(img);const dl=byId("euImageDownload");dl.href=url;dl.style.display="inline-flex";status("euImageStatus","Image generated. Download it below. This illustration is not dimensionally accurate CAD.");
+  }catch(e){status("euImageStatus",e.message||"Image request failed.");byId("euImagePreview").innerHTML='<span class="note">No image generated. Check the message above and your Vercel setup.</span>'}
+  finally{imageButton.disabled=false;imageButton.textContent="Generate Image ↗"}
+ });
+ const packageButton=byId("euGeneratePackage");
+ if(packageButton)packageButton.addEventListener("click",async()=>{
+  const task=value("euDesignTask");if(task.length<8){status("euPackageStatus","Describe the design in more detail.");return}
+  packageButton.disabled=true;packageButton.textContent="Working…";status("euPackageStatus","Generating formulas, dimensions, design notes and starter CAD code…");
+  try{const res=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({discipline:"mechanical",style:"design",task})});let d={};try{d=await res.json()}catch{}if(!res.ok)throw new Error(d.error||"Engineering AI request failed.");byId("euPackageOutput").textContent=d.answer||"The AI returned no design text.";status("euPackageStatus","Design package ready. Review assumptions and verification steps before use.")}
+  catch(e){status("euPackageStatus",e.message||"Could not reach engineering AI. Check GROQ_API_KEY and deployment logs.")}
+  finally{packageButton.disabled=false;packageButton.textContent="Generate Design Package ↗"}
+ });
+ const modelButton=byId("euGenerate3D");
+ if(modelButton)modelButton.addEventListener("click",async()=>{
+  const task=value("euDesignTask");if(task.length<8){status("euPackageStatus","Describe the 3D concept first.");return}
+  modelButton.disabled=true;modelButton.textContent="Building…";status("euPackageStatus","Generating editable 3D concept geometry…");
+  try{const res=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({discipline:"mechanical",style:"scene",task})});let d={};try{d=await res.json()}catch{}if(!res.ok)throw new Error(d.error||"3D generation failed.");if(!d.scene||!Array.isArray(d.scene.objects))throw new Error("The AI returned no usable 3D scene.");localStorage.setItem("eu-ai-generated-scene",JSON.stringify(d.scene));status("euPackageStatus","3D concept created with "+d.scene.objects.length+" parts. Scene JSON is saved locally; use the Universe Creator scene import to view/edit it.");byId("euPackageOutput").textContent="3D scene JSON generated and saved locally.\n\n"+JSON.stringify(d.scene,null,2)+"\n\nThis is a visual concept, not validated CAD."}
+  catch(e){status("euPackageStatus",e.message||"3D generation failed. Check GROQ_API_KEY.")}
+  finally{modelButton.disabled=false;modelButton.textContent="Generate 3D Model"}
+ });
+ const drawButton=byId("euDrawTechnical");
+ if(drawButton)drawButton.addEventListener("click",()=>{
+  const w=Number(byId("euDimW").value),h=Number(byId("euDimH").value),d=Number(byId("euDimD").value);
+  if(![w,h,d].every(n=>Number.isFinite(n)&&n>0&&n<=2000)){status("euPackageStatus","Drawing dimensions must be between 1 and 2000 mm.");return}
+  const fw=Math.min(400,w*3),fh=Math.min(220,h*3),sd=Math.min(300,d*3),td=Math.min(180,d*3);
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="720" viewBox="0 0 1100 720"><rect width="1100" height="720" fill="#fff"/><g fill="#111" font-family="Arial,sans-serif"><text x="40" y="42" font-size="24" font-weight="bold">ENGINEERING CONCEPT DRAWING</text><text x="40" y="68" font-size="13">Rectangular part • Units: mm • Not to manufacturing tolerance</text></g><g stroke="#17212b" stroke-width="2" fill="none"><rect x="100" y="145" width="'+fw+'" height="'+fh+'"/><rect x="620" y="145" width="'+sd+'" height="'+fh+'"/><rect x="100" y="440" width="'+fw+'" height="'+td+'"/></g><g stroke="#2672a4" stroke-width="1.5" fill="none"><path d="M100 125 V105 M'+(100+fw)+' 125 V105 M100 115 H'+(100+fw)+'"/><path d="M80 145 H60 M80 '+(145+fh)+' H60 M70 145 V'+(145+fh)+'"/><path d="M620 125 V105 M'+(620+sd)+' 125 V105 M620 115 H'+(620+sd)+'"/><path d="M100 420 V400 M'+(100+fw)+' 420 V400 M100 410 H'+(100+fw)+'"/></g><g fill="#125783" font-family="Arial,sans-serif" font-size="16"><text x="'+(100+fw/2)+'" y="101" text-anchor="middle">W = '+w+' mm</text><text x="48" y="'+(145+fh/2)+'" text-anchor="middle" transform="rotate(-90 48 '+(145+fh/2)+')">H = '+h+' mm</text><text x="'+(620+sd/2)+'" y="101" text-anchor="middle">D = '+d+' mm</text><text x="'+(100+fw/2)+'" y="398" text-anchor="middle">W = '+w+' mm</text></g><g fill="#111" font-family="Arial,sans-serif" font-size="15"><text x="100" y="135">FRONT VIEW</text><text x="620" y="135">SIDE VIEW</text><text x="100" y="430">TOP VIEW</text><text x="40" y="675" font-size="12">Generated by Engineering Universe • Confirm dimensions and add tolerances before manufacture.</text></g></svg>';
+  const blob=new Blob([svg],{type:"image/svg+xml"}),url=URL.createObjectURL(blob),img=document.createElement("img");img.alt="Dimensioned 3-view rectangular part drawing";img.src=url;byId("euDrawingPreview").replaceChildren(img);const dl=byId("euDrawingDownload");dl.href=url;dl.style.display="inline-flex";status("euPackageStatus","Technical drawing created. Download the SVG; it opens in browsers and vector editors.");
+ });
+})();
+
 </script>
 </body></html>
