@@ -15,6 +15,20 @@
 <section class="hero"><div class="eyebrow">ADVANCED GEOMETRY WORKSPACE</div><h1>Real CAD Studio</h1><p>Use a browser-based OpenCascade CAD kernel for parametric solid modeling, then exchange supported CAD files with FreeCAD. Your existing Groq AI remains the engineering assistant; this workspace provides a more capable CAD modeling environment.</p><div class="row"><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Launch Cascade Studio ↗</a><a class="btn" href="https://ocjs.org/" target="_blank" rel="noopener">OpenCascade.js docs ↗</a><a class="btn" href="https://www.freecad.org/" target="_blank" rel="noopener">FreeCAD ↗</a></div></section>
 <div class="warning"><strong>Mobile note:</strong> CAD engines use WebAssembly and WebGL and can be heavy on a phone. If the embedded editor does not load or feels cramped, tap <em>Launch Cascade Studio</em> to open it directly in a new tab. FreeCAD is a desktop application, not something this page can run natively on Android.</div>
 
+<section class="card" id="studio-readiness" style="margin:18px 0;border-color:#39728b">
+ <div class="eyebrow">CONNECTION DIAGNOSTICS</div>
+ <h2 style="font-size:22px;margin:8px 0">AI + CAD Engine Status</h2>
+ <p class="muted">Checks server-side configuration and the remote CAD worker. Status is not a guarantee that every modeling operation will succeed.</p>
+ <div id="studioHealthRows" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px">
+  <div class="filebox">AI assistant: <strong id="healthAi">Checking…</strong></div>
+  <div class="filebox">FreeCAD: <strong id="healthFreecad">Checking…</strong></div>
+  <div class="filebox">Cascade automation: <strong id="healthCascade">Checking…</strong></div>
+  <div class="filebox">CAD worker: <strong id="healthWorker">Checking…</strong></div>
+ </div>
+ <p id="studioHealthMessage" class="muted" aria-live="polite">Checking connection readiness…</p>
+ <button class="btn" id="refreshStudioHealth" type="button">Refresh status</button>
+</section>
+
 <section class="card" id="ai-operator" style="margin:22px 0;border-color:#39728b">
  <div class="eyebrow">NATURAL-LANGUAGE CONTROL</div><h2 style="font-size:25px;margin:8px 0">AI Studio Operator</h2>
  <p>Describe what you want in plain language. Choose the engineering discipline and the kind of work; Engineering Universe will route the prompt to its Groq-powered engineering assistant.</p>
@@ -183,4 +197,36 @@
  function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}animate();
 })();
 </script>
-\n</body></html>
+\n<script>
+(()=> {
+ const button=document.getElementById('refreshStudioHealth');
+ if(!button)return;
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+ const label=(status)=>({
+  configured:'Configured',missing_configuration:'Not configured',available:'Available',
+  automation_available:'Automation available',unavailable:'Unavailable',ready:'Ready',
+  not_checked:'Not checked',unhealthy:'Unhealthy',unreachable:'Unreachable',
+  invalid_url:'Invalid URL',unknown:'Unknown'
+ }[status]||status||'Unknown');
+ async function refresh(){
+  button.disabled=true;button.textContent='Checking…';
+  ['healthAi','healthFreecad','healthCascade','healthWorker'].forEach(id=>set(id,'Checking…'));
+  set('studioHealthMessage','Checking deployment configuration and worker health…');
+  try{
+   const response=await fetch('/api/cad-status',{headers:{'Accept':'application/json'},cache:'no-store'});
+   const data=await response.json();
+   if(!response.ok)throw new Error(data.error||'Status endpoint returned HTTP '+response.status);
+   set('healthAi',label(data.ai&&data.ai.status));
+   set('healthFreecad',label(data.freecad&&data.freecad.status));
+   set('healthCascade',label(data.cascade&&data.cascade.status));
+   set('healthWorker',label(data.worker&&data.worker.status));
+   set('studioHealthMessage',(data.message||'Status check complete')+(data.ok?' All readiness checks passed.':' Some components need configuration or investigation.'));
+  }catch(error){
+   ['healthAi','healthFreecad','healthCascade','healthWorker'].forEach(id=>set(id,'Check failed'));
+   set('studioHealthMessage','Could not load status: '+(error&&error.message||'unknown error')+'. Confirm this page is deployed with /api/cad-status.');
+  }finally{button.disabled=false;button.textContent='Refresh status';}
+ }
+ button.addEventListener('click',refresh);refresh();
+})();
+</script>
+</body></html>
