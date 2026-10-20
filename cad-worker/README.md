@@ -1,20 +1,34 @@
 # Engineering Universe CAD worker
 
-This optional service creates real FreeCAD solids and exports STEP from a restricted scene schema. It never executes arbitrary AI-generated Python.
+This optional service provides two controlled integrations from the website:
+- FreeCAD: builds primitive solid parts and exports STEP.
+- Cascade Studio + OpenCascade.js: opens Cascade Studio in a headless Chromium browser using Playwright, calls its documented `window.CascadeAPI.runCode()`, and returns execution status/code.
 
-## Requirements and deployment
-Run on a trusted host with a compatible FreeCAD Python runtime where `import FreeCAD` and `import Part` work. This does not run as a normal Vercel function because Vercel does not provide the FreeCAD runtime by default.
+The worker accepts a restricted geometry schema only. It does not execute arbitrary AI-generated Python.
 
-Set `CAD_WORKER_TOKEN` to a long random secret; optional `CAD_WORKER_HOST` defaults to `127.0.0.1` and `CAD_WORKER_PORT` defaults to `8787`. Start with the Python interpreter that can import FreeCAD:
+## Deploy as a Docker web service
+Use this folder as the Docker build context on a container host that supports a long-running web service. The included Dockerfile installs Debian FreeCAD and Playwright/Chromium. FreeCAD and browser dependencies are large, so the first build may take time; check build logs and the `/health` endpoint after deployment.
 
-```sh
-CAD_WORKER_TOKEN='replace-with-a-long-random-secret' python server.py
-```
+Set environment variables:
+- `CAD_WORKER_TOKEN`: long random secret (required)
+- `CAD_WORKER_HOST=0.0.0.0` (required in container hosting)
+- `CAD_WORKER_PORT`: use the port provided by your host if it requires one; default 8787
+- Optional `CASCADE_STUDIO_URL`: defaults to the official Cascade Studio website.
 
-Configure Vercel Environment Variables `CAD_WORKER_URL` (HTTPS base URL, no trailing slash) and `CAD_WORKER_TOKEN` (same secret), then redeploy. Keep the worker behind TLS and network restrictions; do not expose it publicly without access controls.
+The worker must be reachable over HTTPS from Vercel. Restrict access at the hosting layer if possible. Do not expose it without TLS and a strong secret.
 
-## Integration boundaries
-- FreeCAD: generates simple primitive solids and exports STEP when this worker is deployed correctly.
-- OpenCascade.js: still requires a deliberate browser-side WebAssembly integration/build step; this worker does not pretend to load it.
-- Cascade Studio: the existing editor is on a different origin. Browser security prevents control of its internals unless a self-hosted/forked build implements an authenticated `postMessage` command receiver. STEP file exchange is the bridge meanwhile.
-- Geometry is preliminary concept geometry, not validated engineering or simulation.
+Then add these Vercel environment variables:
+- `CAD_WORKER_URL`: HTTPS base URL of the deployed worker, no trailing slash
+- `CAD_WORKER_TOKEN`: exactly the same secret as the worker
+
+Redeploy the Vercel project after adding environment variables.
+
+## Endpoints
+- `GET /health`: reports whether FreeCAD, Playwright, and token configuration are available.
+- `POST /v1/build-step`: authenticated FreeCAD STEP generation.
+- `POST /v1/cascade-run`: authenticated Cascade Studio/OpenCascade execution in headless Chromium.
+
+## Important limits
+- The Cascade action executes against a separate headless Cascade Studio session. It does not manipulate the separately embedded cross-origin iframe in the user's page; browsers prohibit that without modifying/self-hosting the editor.
+- Cascade primitive bridge supports box, cylinder, sphere and cone. FreeCAD supports those plus torus.
+- This is a geometry-generation bridge, not FEA/CFD or engineering validation. Review all dimensions and models before real-world use.
