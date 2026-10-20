@@ -43,7 +43,7 @@
  
  <div class="stage" style="margin:14px 0"><div class="stage-head"><strong>Three.js interactive concept preview</strong><span class="muted">Drag to rotate · pinch/scroll to zoom</span></div><div id="threePreview" style="height:360px;position:relative;background:#070b11"><p id="threeStatus" class="muted" style="padding:16px">Generate a 3D concept to preview it here.</p></div></div>
 \n <pre id="studioOutput" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:560px;overflow:auto;background:#070b11;border:1px solid #2a3b50;border-radius:9px;padding:15px;display:none"></pre>
- <div id="sceneActions" class="row" hidden><button class="btn" id="downloadScene" type="button">Download scene JSON</button><button class="btn" id="copyScene" type="button">Copy scene JSON</button></div>
+ <div id="sceneActions" class="row" hidden><button class="btn" id="downloadScene" type="button">Download scene JSON</button><button class="btn" id="copyScene" type="button">Copy scene JSON</button><button class="btn" id="downloadFreeCADMacro" type="button">Download FreeCAD macro</button><button class="btn primary" id="buildStep" type="button">Build STEP with FreeCAD worker</button></div><p id="cadBridgeStatus" class="muted" role="status" aria-live="polite">FreeCAD STEP generation requires the secured CAD worker to be deployed and configured in Vercel.</p>
  <p class="muted" style="font-size:12px">Honest capability note: the AI can produce discipline-specific research, design packages, calculations, starter code, and a simple scene JSON. Scene JSON is not automatically injected into Cascade Studio yet, and the AI does not run FreeCAD or validated CAD/FEA/CFD simulations. Verify all engineering outputs independently.</p>
 </section>
 
@@ -87,6 +87,21 @@
  document.getElementById('clearStudio').addEventListener('click',()=>{prompt.value='';output.textContent='';output.style.display='none';status.textContent='Ready.';actions.hidden=true;lastScene=null;});
  document.getElementById('downloadScene').addEventListener('click',()=>{if(!lastScene)return;const blob=new Blob([JSON.stringify(lastScene,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='engineering-universe-scene.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
  document.getElementById('copyScene').addEventListener('click',async()=>{if(!lastScene)return;try{await navigator.clipboard.writeText(JSON.stringify(lastScene,null,2));status.textContent='Scene JSON copied.';}catch{status.textContent='Clipboard access was blocked by this browser. Use Download scene JSON instead.';}});
+ function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+ document.getElementById('downloadFreeCADMacro').addEventListener('click',()=>{
+  if(!lastScene)return;
+  const safe=(lastScene.objects||[]).filter(o=>['box','cylinder','sphere','cone','torus'].includes(o.type)).map(o=>({type:o.type,dimensions:o.dimensions,position:o.position,rotation:o.rotation}));
+  const payload=JSON.stringify({units:'mm',objects:safe});
+  const macro='import json\\nimport FreeCAD as App\\nimport Part\\n\\nscene = json.loads('+JSON.stringify(payload)+')\\ndoc = App.newDocument("EngineeringUniverse")\\nfor i, item in enumerate(scene["objects"]):\\n    d = item["dimensions"]\\n    w, h, dep = float(d["width"]), float(d["height"]), float(d["depth"])\\n    kind = item["type"]\\n    if kind == "box": shape = Part.makeBox(w, dep, h)\\n    elif kind == "cylinder": shape = Part.makeCylinder(max(w, dep)/2, h)\\n    elif kind == "sphere": shape = Part.makeSphere(max(w, h, dep)/2)\\n    elif kind == "cone": shape = Part.makeCone(max(w, dep)/2, 0.5, h)\\n    elif kind == "torus": shape = Part.makeTorus(max(w, dep)/2, max(1, min(w, h, dep)*0.12))\\n    p = item.get("position", [0,0,0]); r = item.get("rotation", [0,0,0])\\n    shape.translate(App.Vector(*p))\\n    shape.rotate(App.Vector(*p), App.Vector(1,0,0), float(r[0]))\\n    shape.rotate(App.Vector(*p), App.Vector(0,1,0), float(r[1]))\\n    shape.rotate(App.Vector(*p), App.Vector(0,0,1), float(r[2]))\\n    obj = doc.addObject("PartDesign::Feature", "Part%02d" % (i+1)); obj.Label = kind.capitalize()+" "+str(i+1); obj.Shape = shape\\ndoc.recompute()\\n# Optional STEP export: uncomment and set a writable path.\\n# Part.export([o for o in doc.Objects if hasattr(o, "Shape")], "/path/to/model.step")\\n';
+  saveBlob(new Blob([macro],{type:'text/plain;charset=utf-8'}),'engineering-universe.FCMacro');
+  document.getElementById('cadBridgeStatus').textContent='FreeCAD macro downloaded. Open it in a trusted FreeCAD installation and inspect the generated geometry before using it.';
+ });
+ document.getElementById('buildStep').addEventListener('click',async()=>{
+  if(!lastScene)return;const button=document.getElementById('buildStep'),bridge=document.getElementById('cadBridgeStatus');button.disabled=true;button.textContent='Building STEP…';bridge.textContent='Sending validated primitive geometry to the secured FreeCAD worker…';
+  try{const response=await fetch('/api/cad-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scene:lastScene})});let data;try{data=await response.json()}catch{throw new Error('Worker returned an unreadable response.')}if(!response.ok)throw new Error(data.error||'CAD worker failed.');
+   const binary=atob(data.content_base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);saveBlob(new Blob([bytes],{type:'application/step'}),data.filename||'engineering-universe.step');bridge.textContent='STEP file generated by FreeCAD for '+data.parts+' parts. This is concept geometry, not validated engineering.';
+  }catch(err){bridge.textContent='STEP build unavailable: '+(err&&err.message?err.message:'unknown error')+' You can still download the FreeCAD macro.';}finally{button.disabled=false;button.textContent='Build STEP with FreeCAD worker';}
+ });
 })();
 </script>
 
