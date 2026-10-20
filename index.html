@@ -59,6 +59,23 @@ body{background:#090d14;color:#edf3fb}
 @media(max-width:800px){.design-grid{grid-template-columns:1fr}.stage{min-height:330px}#studios .studio-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-workbench{grid-template-columns:1fr}.editor-toolbar{align-items:flex-start}}
 @media(max-width:520px){#studios .studio-cards{grid-template-columns:1fr 1fr}.stage{min-height:290px}.editor-workspace-body{padding:9px}.editor-toolbar{padding:10px}.editor-chip{font-size:9px}}
 
+
+/* AI code editor and command terminal */
+#devStudio .dev-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:12px}
+#devStudio .dev-panel{background:#0b121c;border:1px solid #2b3b4e;border-radius:9px;overflow:hidden;min-width:0}
+#devStudio .dev-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#111b28;border-bottom:1px solid #2b3b4e;font-size:12px;color:#b7c9dc}
+#devStudio .dev-lights{display:inline-flex;gap:5px;margin-right:8px}
+#devStudio .dev-lights i{width:7px;height:7px;border-radius:50%;background:#61758b}
+#euCodeEditor{height:330px;min-height:250px;background:#080e16}
+#euEditorFallback{display:none;width:100%;height:330px;resize:vertical;background:#080e16;color:#d8e8f7;border:0;padding:14px;font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;outline:none;tab-size:2}
+#euTerminalOutput{height:245px;overflow:auto;padding:12px;color:#c4d5e6;background:#070c12;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+#euTerminalForm{display:flex;gap:8px;padding:10px;background:#0d141e;border-top:1px solid #2b3b4e}
+#euTerminalInput{min-width:0;flex:1;background:#060b11;color:#a6f2cf;border:1px solid #33485e;border-radius:5px;padding:10px;font:13px ui-monospace,SFMono-Regular,Consolas,monospace}
+#euTerminalForm button{flex-shrink:0}
+#devStudio .dev-actions{display:flex;flex-wrap:wrap;gap:7px;padding:9px 11px;border-top:1px solid #253447}
+#devStudio .dev-note{font-size:11px;color:#93a9c1;margin:10px 0 0}
+@media(max-width:800px){#devStudio .dev-grid{grid-template-columns:1fr}#euCodeEditor,#euEditorFallback{height:280px}#euTerminalOutput{height:190px}}
+
 </style>
 </head>
 <body>
@@ -75,7 +92,29 @@ body{background:#090d14;color:#edf3fb}
 <div class="card ai-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h3 style="margin:0">Designer workspace</h3><span class="badge">AI RESPONSE</span></div><p class="note">Outputs should include assumptions, units, verification steps, and credible references to check.</p><div id="aiOutput" class="ai-output" aria-live="polite">Select a studio and describe your engineering task. The AI response will appear here when the secure backend is configured.</div><div class="actions"><button class="btn" id="buildAIModel">Build 3D from AI scene</button><button class="btn" id="saveAIWork">Save response to project library</button><button class="btn" id="copyAIWork">Copy response</button></div></div></div></div>
 <p class="note" style="margin-top:13px">Important: studio names represent specialized AI roles using the configured model and discipline-specific instructions—not separate certified human experts or necessarily separate underlying models. Do not use unverified output for safety-critical construction, medical devices, aircraft, pressure systems, or other regulated designs.</p>
 </div></section>
-\n<section id="calculators"><div class="wrap"><div class="section-head"><div><div class="eyebrow">03 — Verify</div><h2>Engineering Calculation Center</h2></div><p>Quick calculators for common introductory mechanical engineering quantities. Check units, assumptions, and safety factors before using results in a real design.</p></div><div class="calc-grid"><div class="card calc"><div class="icon">↗</div><h3>Force</h3><p>Newton's second law: F = m × a</p><div class="field"><label>Mass (kg)</label><input id="mass" type="number" min="0" value="12"></div><div class="field"><label>Acceleration (m/s²)</label><input id="accel" type="number" value="3"></div><button class="btn primary" onclick="calcForce()">Calculate force</button><div class="result" id="forceResult">36 N</div></div><div class="card calc"><div class="icon">⟳</div><h3>Torque</h3><p>Torque = force × perpendicular radius</p><div class="field"><label>Force (N)</label><input id="force" type="number" min="0" value="100"></div><div class="field"><label>Lever arm (m)</label><input id="radius" type="number" min="0" step=".01" value=".25"></div><button class="btn primary" onclick="calcTorque()">Calculate torque</button><div class="result" id="torqueResult">25 N·m</div></div><div class="card calc"><div class="icon">▤</div><h3>Normal stress</h3><p>Average stress: σ = force / area</p><div class="field"><label>Axial force (N)</label><input id="axial" type="number" min="0" value="5000"></div><div class="field"><label>Cross-sectional area (mm²)</label><input id="area" type="number" min="0" step=".1" value="100"></div><button class="btn primary" onclick="calcStress()">Calculate stress</button><div class="result" id="stressResult">50 MPa</div></div></div><p class="note" style="margin-top:14px">These calculators are educational aids. They do not check buckling, fatigue, temperature, material variability, manufacturing tolerances, or applicable codes.</p></div></section>
+\n
+<section id="devStudio"><div class="wrap">
+<div class="section-head"><div><div class="eyebrow">03 — Build with AI</div><h2>AI Code Editor & Command Terminal</h2></div><p>Write and edit engineering scripts, ask the AI to modify them, and send generated concept geometry to the 3D studio.</p></div>
+<div class="dev-grid">
+<div class="dev-panel">
+<div class="dev-head"><span><span class="dev-lights"><i></i><i></i><i></i></span>ENGINEERING EDITOR</span><select id="euEditorLanguage" aria-label="Editor language"><option value="openscad">OpenSCAD</option><option value="python">Python</option><option value="javascript">JavaScript</option><option value="json">JSON / Scene</option></select></div>
+<div id="euCodeEditor" aria-label="Engineering code editor"></div>
+<textarea id="euEditorFallback" spellcheck="false" aria-label="Engineering code editor fallback"></textarea>
+<div class="dev-actions"><button class="btn" id="euEditorLoad">Load AI code</button><button class="btn" id="euEditorCopy">Copy code</button><button class="btn" id="euEditorDownload">Download file</button><button class="btn primary" id="euEditorApply">Apply JSON scene to 3D</button></div>
+</div>
+<div class="dev-panel">
+<div class="dev-head"><span>ENGINEERING COMMAND TERMINAL</span><span id="euTerminalState">● CONNECTING</span></div>
+<div id="euTerminalOutput" role="log" aria-live="polite">Engineering Universe terminal starting…
+Type help to see available commands.
+This is a restricted engineering command console, not an Android/Linux shell.</div>
+<form id="euTerminalForm"><input id="euTerminalInput" autocomplete="off" spellcheck="false" placeholder="help  |  ai design a gearbox  |  clear"><button class="btn primary" type="submit">Run ↵</button></form>
+<div class="dev-actions"><button class="btn" data-eu-cmd="help">Help</button><button class="btn" data-eu-cmd="ai design a compact gearbox with shafts and gears">AI design example</button><button class="btn" data-eu-cmd="apply-scene">Apply editor scene</button></div>
+</div>
+</div>
+<p class="dev-note">The editor uses Monaco when available and a built-in text editor fallback otherwise. The terminal accepts supported engineering commands only; it does not execute arbitrary shell commands. OpenSCAD and Python code can be edited/exported here, but they are not executed by this browser.</p>
+</div></section>
+
+<section id="calculators"><div class="wrap"><div class="section-head"><div><div class="eyebrow">03 — Verify</div><h2>Engineering Calculation Center</h2></div><p>Quick calculators for common introductory mechanical engineering quantities. Check units, assumptions, and safety factors before using results in a real design.</p></div><div class="calc-grid"><div class="card calc"><div class="icon">↗</div><h3>Force</h3><p>Newton's second law: F = m × a</p><div class="field"><label>Mass (kg)</label><input id="mass" type="number" min="0" value="12"></div><div class="field"><label>Acceleration (m/s²)</label><input id="accel" type="number" value="3"></div><button class="btn primary" onclick="calcForce()">Calculate force</button><div class="result" id="forceResult">36 N</div></div><div class="card calc"><div class="icon">⟳</div><h3>Torque</h3><p>Torque = force × perpendicular radius</p><div class="field"><label>Force (N)</label><input id="force" type="number" min="0" value="100"></div><div class="field"><label>Lever arm (m)</label><input id="radius" type="number" min="0" step=".01" value=".25"></div><button class="btn primary" onclick="calcTorque()">Calculate torque</button><div class="result" id="torqueResult">25 N·m</div></div><div class="card calc"><div class="icon">▤</div><h3>Normal stress</h3><p>Average stress: σ = force / area</p><div class="field"><label>Axial force (N)</label><input id="axial" type="number" min="0" value="5000"></div><div class="field"><label>Cross-sectional area (mm²)</label><input id="area" type="number" min="0" step=".1" value="100"></div><button class="btn primary" onclick="calcStress()">Calculate stress</button><div class="result" id="stressResult">50 MPa</div></div></div><p class="note" style="margin-top:14px">These calculators are educational aids. They do not check buckling, fatigue, temperature, material variability, manufacturing tolerances, or applicable codes.</p></div></section>
 <section id="library"><div class="wrap"><div class="section-head"><div><div class="eyebrow">04 — Keep building</div><h2>Project Library</h2></div><p>Keep research briefs, model settings, and checklists saved locally in this browser. Export or back up important work regularly.</p></div><div class="actions" style="margin:0 0 18px"><button class="btn" id="exportLibrary">Export library JSON</button><button class="btn" id="clearLibrary">Clear local library</button></div><div class="library-list" id="libraryList"><div class="saved"><b>No saved projects yet</b><small>Save a brief or model to begin.</small></div></div></div></section>
 </main>
 <footer><div class="wrap foot"><div><b>ENGINEERING UNIVERSE</b><br>Research • Design • Calculate</div><div>Prototype platform v0.1 · Mobile-first</div><div>AI backend and professional CAD/simulation integrations are not connected yet.</div></div></footer>
@@ -175,4 +214,39 @@ document.getElementById('exportStl').addEventListener('click',()=>window.EU3D.ex
 function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
 window.addEventListener('eu3d-ready',()=>{});
 window.EU3D.update('box',{width:80,height:40,depth:60},25);
-</script></body></html>
+</script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const out=$('euTerminalOutput'),input=$('euTerminalInput'),fallback=$('euEditorFallback'),lang=$('euEditorLanguage');
+let editor=null,editorReady=false,lastGeneratedCode='',lastScene=null,monacoLoading=false;
+function log(s){out.textContent+=(out.textContent?'\n':'')+s;out.scrollTop=out.scrollHeight}
+function setCode(s){lastGeneratedCode=s||'';if(editor){editor.setValue(lastGeneratedCode)}else{fallback.value=lastGeneratedCode}}
+function getCode(){return editor?editor.getValue():fallback.value}
+function setLanguage(){if(editor&&window.monaco){const m={openscad:'cpp',python:'python',javascript:'javascript',json:'json'}[lang.value]||'plaintext';const model=editor.getModel();window.monaco.editor.setModelLanguage(model,m)}}
+function initMonaco(){if(monacoLoading||editorReady)return;monacoLoading=true;const loader=document.createElement('script');loader.src='https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js';loader.onload=()=>{window.require.config({paths:{vs:'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs'}});window.require(['vs/editor/editor.main'],()=>{editor=window.monaco.editor.create($('euCodeEditor'),{value:fallback.value||'// Engineering Universe starter\n// Use the terminal command: ai design <your engineering task>\n',language:'cpp',theme:'vs-dark',automaticLayout:true,minimap:{enabled:false},fontSize:13,wordWrap:'on',scrollBeyondLastLine:false});fallback.style.display='none';$('euCodeEditor').style.display='block';editorReady=true;setLanguage();$('euTerminalState').textContent='● EDITOR READY';log('Monaco code editor ready.');});};loader.onerror=()=>{fallback.style.display='block';$('euCodeEditor').style.display='none';$('euTerminalState').textContent='● FALLBACK EDITOR';log('Monaco CDN unavailable; using built-in text editor.');};document.head.appendChild(loader)}
+fallback.value='// Engineering Universe starter\n// Ask AI: ai design a compact gearbox with shafts and gears\n';
+$('euCodeEditor').style.display='block';fallback.style.display='none';
+initMonaco();
+lang.addEventListener('change',setLanguage);
+function extractScene(answer){const m=answer.match(/\`\`\`(?:eu-scene|json)\s*([\s\S]*?)\`\`\`/i);if(!m)return null;try{const v=JSON.parse(m[1]);if(v&&Array.isArray(v.objects))return v}catch(e){}return null}
+function extractCode(answer){let m=answer.match(/\`\`\`openscad\s*([\s\S]*?)\`\`\`/i);if(m)return {lang:'openscad',code:m[1].trim()};m=answer.match(/\`\`\`(python|javascript|json)\s*([\s\S]*?)\`\`\`/i);if(m)return {lang:m[1],code:m[2].trim()};return null}
+function applyScene(scene){if(!scene||!Array.isArray(scene.objects))throw new Error('Expected JSON with an objects array.');if(!window.EU3D||!window.EU3D.renderSpec)throw new Error('3D engine has not finished loading. Wait a moment and retry.');window.EU3D.renderSpec(scene);lastScene=scene;$('modelName').textContent='EDITOR SCENE / CONCEPT';$('dimensions').textContent='JSON scene • mm';log('Scene applied to 3D viewport ('+scene.objects.length+' objects). Concept only; not validated CAD.');}
+async function runAI(task){if(!task.trim())throw new Error('Add a task after ai.');log('AI request → '+task);$('euTerminalState').textContent='● AI WORKING';const res=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:'mechanical',task,style:'design'})});let data;try{data=await res.json()}catch(e){throw new Error('AI endpoint returned an unreadable response.')}if(!res.ok)throw new Error(data.error||'AI request failed');const answer=data.answer||'';log('AI RESPONSE:\n'+answer);const scene=extractScene(answer);if(scene){applyScene(scene);const json=JSON.stringify(scene,null,2);setCode(json);lang.value='json';setLanguage();log('AI scene JSON loaded into editor.')}const code=extractCode(answer);if(code){setCode(code.code);lang.value=code.lang;setLanguage();log('AI '+code.lang+' code loaded into editor. Use Download file to save it.')}lastGeneratedCode=getCode();$('euTerminalState').textContent='● READY';}
+async function command(raw){const cmd=raw.trim();if(!cmd)return;log('> '+cmd);const low=cmd.toLowerCase();if(low==='help'){log('SUPPORTED COMMANDS\nhelp                  Show commands\nclear                 Clear terminal output\nstatus                Show editor / 3D connection status\nai <task>             Ask engineering AI; scene and code are loaded when returned\ndesign <task>         Shortcut for AI design\napply-scene           Parse JSON from editor and send objects to 3D viewport\neditor                Show editor help\n\nExamples:\nai design a gearbox concept with 3 shafts\ndesign a robot arm with 4 joints\nai create a device enclosure 100 x 60 x 25 mm\n\nThis console is not a general Linux/Termux shell.');return}
+if(low==='clear'){out.textContent='Terminal cleared. Type help for commands.';return}
+if(low==='status'){log('AI endpoint: /api/engineer\nEditor: '+(editorReady?'Monaco':'built-in fallback')+'\n3D engine: '+(window.EU3D?'ready':'loading')+'\nAI scene: '+(lastScene?'available':'none loaded'));return}
+if(low==='editor'){log('Edit the code area. Choose a language from the menu. Download file saves your work. Use JSON / Scene and Apply JSON scene to 3D for hand-authored scene geometry.');return}
+if(low==='apply-scene'){let scene;try{scene=JSON.parse(getCode())}catch(e){throw new Error('Editor text is not valid JSON. Select JSON / Scene and paste a scene object.')}applyScene(scene);return}
+if(low.startsWith('ai ')){await runAI(cmd.slice(3));return}
+if(low.startsWith('design ')){await runAI(cmd.slice(7));return}
+throw new Error('Unknown command. Type help for supported commands.')}
+$('euTerminalForm').addEventListener('submit',async e=>{e.preventDefault();const cmd=input.value;input.value='';try{await command(cmd)}catch(err){log('ERROR: '+err.message);$('euTerminalState').textContent='● CHECK MESSAGE'}});
+document.querySelectorAll('[data-eu-cmd]').forEach(b=>b.addEventListener('click',()=>{input.value=b.dataset.euCmd;input.focus()}));
+$('euEditorApply').addEventListener('click',()=>{try{applyScene(JSON.parse(getCode()))}catch(e){log('ERROR: '+e.message)}});
+$('euEditorCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(getCode());log('Editor contents copied.')}catch(e){log('Clipboard unavailable; select and copy the editor text.')}});
+$('euEditorDownload').addEventListener('click',()=>{const ext={openscad:'scad',python:'py',javascript:'js',json:'json'}[lang.value]||'txt';const blob=new Blob([getCode()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='engineering-universe-design.'+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);log('Downloaded engineering-universe-design.'+ext)});
+$('euEditorLoad').addEventListener('click',()=>{if(!lastGeneratedCode){log('No AI-generated code yet. Run: ai design <your task>');return}setCode(lastGeneratedCode);log('Last generated code loaded into editor.')});
+})();
+</script>
+</body></html>
