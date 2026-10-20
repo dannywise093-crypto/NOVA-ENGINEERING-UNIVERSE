@@ -91,6 +91,19 @@ body{background:#090d14;color:#edf3fb}
 @media(max-width:800px){.image-design-grid{grid-template-columns:1fr}}
 
 </style>
+
+<style>
+#original-cad-studios{scroll-margin-top:85px}
+.cad-launch-card{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.cad-launch-card .actions{margin-top:auto;align-items:flex-start}
+.cad-launch-card .actions .btn{font-size:12px;padding:10px 12px}
+.cad-launch-card .textbtn{font-size:12px;text-align:left}
+.cad-integration-note{margin-top:18px;padding:20px}
+.cad-integration-note h3{margin-top:0}
+.cad-integration-note p{color:var(--muted)}
+@media(max-width:520px){.cad-launch-card .actions{flex-direction:column;align-items:stretch;width:100%}.cad-launch-card .actions a{width:100%}}
+</style>
+
 </head>
 <body>
 <header class="top"><div class="wrap nav"><a class="brand" href="#home"><span class="logo">EU</span><span>ENGINEERING UNIVERSE<small>RESEARCH • DESIGN • BUILD</small></span></a><nav class="links" id="links"><a href="#lab">Research Lab</a><a href="#studios">AI Engineering Studios</a><a href="#engineeringAI">Formula &amp; Design AI</a><a href="#studio">3D Studio</a><a href="#worldStudio">Universe Creator</a><a href="cad-studio.html">Real CAD Studio</a><a href="#calculators">Calculators</a><a href="#library">Project Library</a></nav><button class="menu" id="menu">Menu ☰</button></div></header>
@@ -272,6 +285,17 @@ This is a restricted engineering command console, not an Android/Linux shell.</d
    <div class="actions"><button class="btn primary" id="euDrawTechnical">Create Drawing</button><a class="btn id-download" id="euDrawingDownload" download="engineering-technical-drawing.svg">Download SVG ↓</a></div><div class="id-preview" id="euDrawingPreview"><span class="note">Your drawing will appear here.</span></div>
   </div>
  </div><p class="note" style="margin-top:14px">Important: AI-generated images are illustrations, not dimensionally accurate CAD. The 3-view drawing is a simple rectangular-part template. Verify formulas, dimensions, tolerances, loads, materials, and safety with appropriate engineering tools and a qualified reviewer.</p>
+</div></section>
+
+
+<section id="original-cad-studios"><div class="wrap">
+ <div class="section-head"><div><div class="eyebrow">03 — Original CAD applications</div><h2>Open the Real CAD Studios</h2></div><p>Launch the original projects from NOVA Engineering Universe. The links open the official hosted applications or project pages; where a provider blocks embedding, the studio opens separately rather than showing a broken blank panel.</p></div>
+ <div class="cards cad-launch-grid">
+  <article class="card cad-launch-card"><div class="icon">◈</div><span class="badge">GEOMETRY KERNEL</span><h3>Open CASCADE / OpenCascade.js</h3><p>Open CASCADE is the geometry technology; OpenCascade.js makes supported kernel features available in browser and WebAssembly applications. It is an engine/library, not a standalone full CAD desktop interface.</p><div class="actions"><a class="btn primary" href="https://ocjs.org/" target="_blank" rel="noopener noreferrer">Open official OpenCascade.js ↗</a><a class="textbtn" href="https://dev.opencascade.org/" target="_blank" rel="noopener noreferrer">Open CASCADE Technology docs ↗</a></div></article>
+  <article class="card cad-launch-card"><div class="icon">⬡</div><span class="badge">BROWSER CAD</span><h3>Cascade Studio</h3><p>Launch the original browser CAD editor with its scripting workspace, live 3D modelling, and supported CAD file import/export tools.</p><div class="actions"><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener noreferrer">Launch original Cascade Studio ↗</a><a class="textbtn" href="https://github.com/zalo/CascadeStudio" target="_blank" rel="noopener noreferrer">Source code ↗</a></div></article>
+  <article class="card cad-launch-card"><div class="icon">⚙</div><span class="badge">PARAMETRIC CAD</span><h3>FreeCAD</h3><p>Open the official FreeCAD project and download the original desktop application. An experimental browser build exists, but it may have device and browser requirements and is not the official desktop release.</p><div class="actions"><a class="btn primary" href="https://www.freecad.org/" target="_blank" rel="noopener noreferrer">FreeCAD official site ↗</a><a class="textbtn" href="https://freecad.virtastic.app/" target="_blank" rel="noopener noreferrer">Try browser build (experimental) ↗</a></div></article>
+ </div>
+ <div class="workspace cad-integration-note"><h3>AI connection and project handoff</h3><p>These launch buttons provide access to the real original software. AI control is a separate integration: Cascade Studio documents a programmatic Agent API, while OpenCascade.js can power browser CAD features. FreeCAD automation requires a configured backend or local FreeCAD installation. NOVA must send only validated, supported commands, keep API tokens server-side, and request confirmation before overwriting or exporting project files.</p><div class="studio-pills"><span>Original applications</span><span>External launch fallback</span><span>STEP file handoff</span><span>AI integration requires backend verification</span></div><a class="btn" href="cad-studio.html">Open NOVA CAD integration workspace ↗</a></div>
 </div></section>
 
 </main>
