@@ -35,7 +35,7 @@ def make_cascade_code(objects):
         lines.append("let %s = %s;"%(name,expr)); shapes.append(name)
     if not shapes: raise ValueError("Cascade bridge supports box, cylinder, sphere and cone; use FreeCAD for torus parts.")
     lines.append("Union([%s]);"%(", ".join(shapes)))
-    return "\\n".join(lines)
+    return "\n".join(lines)
 def num(v, default=0, low=-5000, high=5000):
     try: x=float(v)
     except (TypeError,ValueError): x=default
