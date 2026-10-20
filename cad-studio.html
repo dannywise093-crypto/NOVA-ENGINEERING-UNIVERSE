@@ -31,9 +31,9 @@
  <label><strong>CAD tools the AI should consider</strong></label>
  <div id="toolAccess" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin:9px 0 16px">
   <label class="filebox"><input type="checkbox" name="studioTool" value="three" checked> <strong>Three.js</strong><br><small class="muted">Interactive 3D preview in this page</small></label>
-  <label class="filebox"><input type="checkbox" name="studioTool" value="cascade" checked> <strong>Cascade Studio</strong><br><small class="muted">Browser CAD workspace; AI-to-editor automation still needs a bridge</small></label>
-  <label class="filebox"><input type="checkbox" name="studioTool" value="opencascade" checked> <strong>OpenCascade.js</strong><br><small class="muted">Precision geometry kernel; direct integration still needs implementation</small></label>
-  <label class="filebox"><input type="checkbox" name="studioTool" value="freecad" checked> <strong>FreeCAD</strong><br><small class="muted">File/worker route; live server execution is not configured yet</small></label>
+  <label class="filebox"><input type="checkbox" name="studioTool" value="cascade" checked> <strong>Cascade Studio</strong><br><small class="muted">Browser CAD engine; remote automation uses the secured worker</small></label>
+  <label class="filebox"><input type="checkbox" name="studioTool" value="opencascade" checked> <strong>OpenCascade.js</strong><br><small class="muted">CAD kernel used by Cascade Studio; controlled through its automation API</small></label>
+  <label class="filebox"><input type="checkbox" name="studioTool" value="freecad" checked> <strong>FreeCAD</strong><br><small class="muted">STEP export worker and downloadable FreeCAD macro; worker setup required</small></label>
  </div>
 \n  <label for="prompt"><strong>Your prompt</strong></label>
   <textarea id="prompt" rows="5" maxlength="8000" required placeholder="Example: Design a compact two-wheel electric trolley frame. Suggest dimensions in mm, explain the load assumptions, show the main formulas, and create a simple 3D concept." style="display:block;width:100%;margin:7px 0 12px;padding:13px;border-radius:8px;background:#091321;color:#edf5ff;border:1px solid #3a5873;resize:vertical"></textarea>
