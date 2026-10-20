@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: engineering-universe-cad-worker
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./cad-worker/Dockerfile
+    dockerContext: ./cad-worker
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: CAD_WORKER_TOKEN
+        sync: false
+      - key: CASCADE_STUDIO_URL
+        value: https://zalo.github.io/CascadeStudio/
