@@ -62,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self,code,obj):
         raw=json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(raw))); self.end_headers(); self.wfile.write(raw)
     def do_GET(self):
-        if self.path=="/health": self.send_json(200,{"ok":bool(App and Part and TOKEN),"freecad_available":bool(App and Part),"token_configured":bool(TOKEN)})
+        if self.path=="/health": self.send_json(200,{"ok":bool(TOKEN and (App and Part or sync_playwright)),"freecad_available":bool(App and Part),"cascade_playwright_available":bool(sync_playwright),"token_configured":bool(TOKEN)})
         else: self.send_json(404,{"error":"Not found"})
     def do_POST(self):
         if self.path not in ("/v1/build-step","/v1/cascade-run"): return self.send_json(404,{"error":"Not found"})
@@ -87,6 +87,7 @@ class Handler(BaseHTTPRequestHandler):
                 success=bool(result and result.get("success"))
                 self.send_json(200 if success else 422,{"success":success,"code":code,"result":result or {},"engine":"Cascade Studio / OpenCascade.js","note":"Executed in a headless Cascade Studio session; the separate embedded editor is not synchronized."})
                 return
+            if not App or not Part: return self.send_json(503,{"error":"FreeCAD Python modules are unavailable in this worker."})
             if not isinstance(objects,list) or not objects or len(objects)>30: raise ValueError("Provide 1–30 scene objects.")
             doc=App.newDocument("EngineeringUniverse"); made=[]
             for i,item in enumerate(objects):
