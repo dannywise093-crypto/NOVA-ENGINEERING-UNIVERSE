@@ -62,7 +62,9 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self,code,obj):
         raw=json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(raw))); self.end_headers(); self.wfile.write(raw)
     def do_GET(self):
-        if self.path=="/health": self.send_json(200,{"ok":bool(TOKEN and (App and Part or sync_playwright)),"freecad_available":bool(App and Part),"cascade_playwright_available":bool(sync_playwright),"token_configured":bool(TOKEN)})
+        if self.path=="/health":
+            ready=bool(TOKEN and App and Part and sync_playwright)
+            self.send_json(200 if ready else 503,{"ok":ready,"freecad_available":bool(App and Part),"cascade_playwright_available":bool(sync_playwright),"token_configured":bool(TOKEN)})
         else: self.send_json(404,{"error":"Not found"})
     def do_POST(self):
         if self.path not in ("/v1/build-step","/v1/cascade-run"): return self.send_json(404,{"error":"Not found"})
