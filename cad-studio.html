@@ -14,7 +14,29 @@
 <main class="wrap">
 <section class="hero"><div class="eyebrow">ADVANCED GEOMETRY WORKSPACE</div><h1>Real CAD Studio</h1><p>Use a browser-based OpenCascade CAD kernel for parametric solid modeling, then exchange supported CAD files with FreeCAD. Your existing Groq AI remains the engineering assistant; this workspace provides a more capable CAD modeling environment.</p><div class="row"><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Launch Cascade Studio ↗</a><a class="btn" href="https://ocjs.org/" target="_blank" rel="noopener">OpenCascade.js docs ↗</a><a class="btn" href="https://www.freecad.org/" target="_blank" rel="noopener">FreeCAD ↗</a></div></section>
 <div class="warning"><strong>Mobile note:</strong> CAD engines use WebAssembly and WebGL and can be heavy on a phone. If the embedded editor does not load or feels cramped, tap <em>Launch Cascade Studio</em> to open it directly in a new tab. FreeCAD is a desktop application, not something this page can run natively on Android.</div>
-<section class="stage"><div class="stage-head"><strong>Cascade Studio · OpenCascade kernel</strong><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open full editor ↗</a></div><iframe title="Cascade Studio CAD editor" src="https://zalo.github.io/CascadeStudio/" loading="lazy" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer"></iframe></section>
+
+<section class="card" id="ai-operator" style="margin:22px 0;border-color:#39728b">
+ <div class="eyebrow">NATURAL-LANGUAGE CONTROL</div><h2 style="font-size:25px;margin:8px 0">AI Studio Operator</h2>
+ <p>Describe what you want in plain language. Choose the engineering discipline and the kind of work; Engineering Universe will route the prompt to its Groq-powered engineering assistant.</p>
+ <form id="studioForm">
+  <label for="discipline"><strong>Engineering studio</strong></label>
+  <select id="discipline" style="display:block;width:100%;margin:7px 0 14px;padding:12px;border-radius:8px;background:#091321;color:#edf5ff;border:1px solid #3a5873">
+   <option value="mechanical">Mechanical & CAD</option><option value="civil">Civil & Structural</option><option value="electrical">Electrical & Electronics</option><option value="aerospace">Aerospace & Flight</option><option value="chemical">Chemical & Process</option><option value="materials">Materials Science</option><option value="robotics">Robotics & Mechatronics</option><option value="automotive">Automotive & Mobility</option><option value="energy">Energy & Thermal</option><option value="fluids">Fluid Systems</option><option value="biomedical">Biomedical Engineering</option><option value="software">Software & Computer Engineering</option>
+  </select>
+  <label for="taskStyle"><strong>What should the AI studio do?</strong></label>
+  <select id="taskStyle" style="display:block;width:100%;margin:7px 0 14px;padding:12px;border-radius:8px;background:#091321;color:#edf5ff;border:1px solid #3a5873">
+   <option value="design">Design a concept + formulas + CAD starter</option><option value="scene">Generate a simple 3D concept scene</option><option value="research">Research plan and technical brief</option><option value="calculate">Engineering calculations</option><option value="review">Review risks and design assumptions</option><option value="code">Code / simulation starter</option>
+  </select>
+  <label for="prompt"><strong>Your prompt</strong></label>
+  <textarea id="prompt" rows="5" maxlength="8000" required placeholder="Example: Design a compact two-wheel electric trolley frame. Suggest dimensions in mm, explain the load assumptions, show the main formulas, and create a simple 3D concept." style="display:block;width:100%;margin:7px 0 12px;padding:13px;border-radius:8px;background:#091321;color:#edf5ff;border:1px solid #3a5873;resize:vertical"></textarea>
+  <div class="row" style="margin-top:8px"><button class="btn primary" id="runStudio" type="submit">Run AI studio</button><button class="btn" id="clearStudio" type="button">Clear</button><a class="btn" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open CAD workspace ↗</a></div>
+ </form>
+ <p id="studioStatus" class="muted" role="status" aria-live="polite">Ready. Your prompt is sent to the Engineering Universe API; do not include passwords or secret keys.</p>
+ <pre id="studioOutput" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:560px;overflow:auto;background:#070b11;border:1px solid #2a3b50;border-radius:9px;padding:15px;display:none"></pre>
+ <div id="sceneActions" class="row" hidden><button class="btn" id="downloadScene" type="button">Download scene JSON</button><button class="btn" id="copyScene" type="button">Copy scene JSON</button></div>
+ <p class="muted" style="font-size:12px">Honest capability note: the AI can produce discipline-specific research, design packages, calculations, starter code, and a simple scene JSON. Scene JSON is not automatically injected into Cascade Studio yet, and the AI does not run FreeCAD or validated CAD/FEA/CFD simulations. Verify all engineering outputs independently.</p>
+</section>
+\n<section class="stage"><div class="stage-head"><strong>Cascade Studio · OpenCascade kernel</strong><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open full editor ↗</a></div><iframe title="Cascade Studio CAD editor" src="https://zalo.github.io/CascadeStudio/" loading="lazy" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer"></iframe></section>
 <section class="grid">
 <article class="card"><h2>01 · OpenCascade.js</h2><p>The geometry kernel is the foundation for precise solid operations. Cascade Studio already uses OpenCascade technology, so this avoids loading a second, competing CAD kernel into the same page.</p><a href="https://ocjs.org/" target="_blank" rel="noopener">Official docs →</a></article>
 <article class="card"><h2>02 · Cascade Studio</h2><p>Use parametric code to create solids, sketches, extrusions, revolutions, sweeps, booleans and fillets. The project documents STEP/STL/OBJ export and supported import workflows.</p><a href="https://github.com/zalo/CascadeStudio" target="_blank" rel="noopener">Source & examples →</a></article>
@@ -26,4 +48,26 @@
 <script>
 (()=>{const f=document.getElementById('cadFile'),o=document.getElementById('fileInfo');f.addEventListener('change',()=>{const x=f.files&&f.files[0];o.textContent=x?('Selected locally: '+x.name+' · '+(x.size/1024).toFixed(1)+' KB. No upload occurred.'): 'No file selected.';});})();
 </script>
-</body></html>
+
+<script>
+(()=>{
+ const form=document.getElementById('studioForm'),prompt=document.getElementById('prompt'),discipline=document.getElementById('discipline'),taskStyle=document.getElementById('taskStyle'),status=document.getElementById('studioStatus'),output=document.getElementById('studioOutput'),actions=document.getElementById('sceneActions'),run=document.getElementById('runStudio');
+ let lastScene=null;
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();const task=prompt.value.trim();if(task.length<8){status.textContent='Please describe the engineering task in at least 8 characters.';return;}
+  run.disabled=true;run.textContent='Working…';output.style.display='block';output.textContent='';actions.hidden=true;lastScene=null;status.textContent='Sending your prompt to the selected engineering studio…';
+  try{
+   const response=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:discipline.value,style:taskStyle.value,task})});
+   let data;try{data=await response.json()}catch{throw new Error('The server returned an unreadable response. Check that the latest Vercel deployment is ready.');}
+   if(!response.ok)throw new Error(data.error||'The AI request failed.');
+   if(data.scene){lastScene=data.scene;output.textContent=JSON.stringify(data.scene,null,2);actions.hidden=false;status.textContent='3D concept scene generated. Download the JSON; it is not yet automatically inserted into Cascade Studio.';}
+   else{output.textContent=data.answer||'The AI returned no text.';status.textContent='Response received from '+(data.role||discipline.options[discipline.selectedIndex].text)+'.';}
+  }catch(err){status.textContent='Could not run the studio: '+(err&&err.message?err.message:'Unknown error');output.textContent='Check your connection and the Vercel deployment. If this keeps happening, the /api/engineer endpoint or GROQ_API_KEY configuration may need attention.';}
+  finally{run.disabled=false;run.textContent='Run AI studio';}
+ });
+ document.getElementById('clearStudio').addEventListener('click',()=>{prompt.value='';output.textContent='';output.style.display='none';status.textContent='Ready.';actions.hidden=true;lastScene=null;});
+ document.getElementById('downloadScene').addEventListener('click',()=>{if(!lastScene)return;const blob=new Blob([JSON.stringify(lastScene,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='engineering-universe-scene.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+ document.getElementById('copyScene').addEventListener('click',async()=>{if(!lastScene)return;try{await navigator.clipboard.writeText(JSON.stringify(lastScene,null,2));status.textContent='Scene JSON copied.';}catch{status.textContent='Clipboard access was blocked by this browser. Use Download scene JSON instead.';}});
+})();
+</script>
+\n</body></html>
