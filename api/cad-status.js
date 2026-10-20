@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
     const timeout = setTimeout(() => controller.abort(), 8000);
     let response;
     try {
-      response = await fetch(workerUrl.replace(/\\/$/, "") + "/health", {
+      response = await fetch((workerUrl.endsWith("/") ? workerUrl.slice(0, -1) : workerUrl) + "/health",
         method: "GET",
         headers: { "Authorization": "Bearer " + workerToken },
         signal: controller.signal
