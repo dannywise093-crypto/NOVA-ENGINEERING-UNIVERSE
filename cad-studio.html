@@ -68,10 +68,10 @@
   e.preventDefault();const task=prompt.value.trim();if(task.length<8){status.textContent='Please describe the engineering task in at least 8 characters.';return;}
   run.disabled=true;run.textContent='Working…';output.style.display='block';output.textContent='';actions.hidden=true;lastScene=null;status.textContent='Sending your prompt to the selected engineering studio…';
   try{
-   const response=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:discipline.value,style:taskStyle.value,task})});
+   const response=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:discipline.value,style:taskStyle.value,task:task+'\\n\\nRequested tool targets (availability is not proof of live execution): '+Array.from(document.querySelectorAll('input[name="studioTool"]:checked')).map(x=>x.value).join(', ')})});
    let data;try{data=await response.json()}catch{throw new Error('The server returned an unreadable response. Check that the latest Vercel deployment is ready.');}
    if(!response.ok)throw new Error(data.error||'The AI request failed.');
-   if(data.scene){lastScene=data.scene;output.textContent=JSON.stringify(data.scene,null,2);actions.hidden=false;status.textContent='3D concept scene generated. Download the JSON; it is not yet automatically inserted into Cascade Studio.';}
+   if(data.scene){lastScene=data.scene;output.textContent=JSON.stringify(data.scene,null,2);actions.hidden=false;if(window.euRenderScene && document.querySelector('input[name="studioTool"][value="three"]:checked'))window.euRenderScene(data.scene);status.textContent='3D concept generated. Three.js preview updated when selected. Cascade Studio, OpenCascade.js and FreeCAD are not yet automatically executing this model.';}
    else{output.textContent=data.answer||'The AI returned no text.';status.textContent='Response received from '+(data.role||discipline.options[discipline.selectedIndex].text)+'.';}
   }catch(err){status.textContent='Could not run the studio: '+(err&&err.message?err.message:'Unknown error');output.textContent='Check your connection and the Vercel deployment. If this keeps happening, the /api/engineer endpoint or GROQ_API_KEY configuration may need attention.';}
   finally{run.disabled=false;run.textContent='Run AI studio';}
