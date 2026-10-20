@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
       method: "POST",
       headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+        model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
         temperature: 0.2,
         max_tokens: 1800,
         messages: [{ role: "system", content: system }, { role: "user", content: user }]
