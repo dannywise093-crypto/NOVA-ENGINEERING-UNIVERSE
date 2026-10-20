@@ -22,7 +22,7 @@ const STYLES = {
 function parseSceneAnswer(text) {
   if (typeof text !== "string") return null;
   // Prefer the labelled scene block so braces in CAD/code examples do not interfere.
-  const labelled = text.match(/```\\s*eu-scene\\s*\\n([\\s\\S]*?)\\n```/i);
+  const labelled = text.match(/```\s*eu-scene\s*\n([\s\S]*?)\n```/i);
   const cleaned = (labelled ? labelled[1] : text.replace(/```(?:json|eu-scene)?/gi, "").replace(/```/g, "")).trim();
   const start = cleaned.indexOf("{");
   if (start < 0) return null;
@@ -31,7 +31,7 @@ function parseSceneAnswer(text) {
     const ch = cleaned[i];
     if (quoted) {
       if (escaped) escaped = false;
-      else if (ch === "\\\\") escaped = true;
+      else if (ch === "\\") escaped = true;
       else if (ch === '"') quoted = false;
       continue;
     }
