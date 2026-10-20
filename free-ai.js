@@ -28,8 +28,7 @@ function setBusy(value) {
   $("generateScene").disabled = value || !engine;
 }
 function extractJson(text) {
-  const fenced = text.match(/\x60\x60\x60\\s*(?:json|eu-scene)?\\s*\\n([\\s\\S]*?)\\n\x60\x60\x60/i);
-  const source = (fenced ? fenced[1] : text).trim();
+  const source = text.replaceAll(String.fromCharCode(96).repeat(3), "").replace(/^\s*(?:json|eu-scene)\s*/i, "").trim();
   const start = source.indexOf("{");
   if (start < 0) throw new Error("The model did not return a JSON scene. Try a simpler object description.");
   let depth = 0, quoted = false, escaped = false, end = -1;
@@ -37,7 +36,7 @@ function extractJson(text) {
     const ch = source[i];
     if (quoted) {
       if (escaped) escaped = false;
-      else if (ch === "\\\\") escaped = true;
+      else if (ch === "\\") escaped = true;
       else if (ch === '"') quoted = false;
     } else if (ch === '"') quoted = true;
     else if (ch === "{") depth++;
