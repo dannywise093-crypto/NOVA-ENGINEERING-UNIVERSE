@@ -46,3 +46,26 @@ Import this repository into Vercel. The root `index.html` serves the frontend an
 The model preview is illustrative and the current OBJ export is a basic block mesh; the cylinder and gear-like preview are visual concepts, not exported parametric CAD. The calculators are educational and do not account for all failure modes, safety factors, codes, or material/environment effects. The AI can make mistakes and does not automatically retrieve live papers, browse the web, or execute a CAD/CAE solver. Check references, units, assumptions, equations, and results independently. Safety-critical construction, aircraft, pressure systems, electrical installations, vehicles, and medical devices require qualified professional review and validated analysis.
 
 Full parametric CAD, dimensioned technical drawings, native STEP export, PCB editing, BIM, CFD, FEA, and other advanced simulation integrations are future phases and require appropriate CAD/solver engines and infrastructure.
+
+## CAD automation bridge (FreeCAD + Cascade Studio/OpenCascade.js)
+
+The repository now includes a secured CAD worker under `cad-worker/` and Vercel proxy endpoints:
+- `POST /api/cad-control`: build a STEP file with FreeCAD.
+- `POST /api/cascade-control`: execute supported generated geometry in a headless Cascade Studio session using its `window.CascadeAPI` and OpenCascade.js kernel.
+- `cad-studio.html`: offers a FreeCAD macro download plus worker buttons for STEP generation and Cascade execution.
+
+### Activate the real CAD worker
+1. Deploy `cad-worker/` as a Docker web service using its included Dockerfile.
+2. Set a long random `CAD_WORKER_TOKEN` on the worker; make sure the host serves it over HTTPS.
+3. Copy the worker's HTTPS base URL and the exact same token into Vercel as `CAD_WORKER_URL` and `CAD_WORKER_TOKEN`.
+4. Redeploy the Vercel site, then open the CAD Studio and test the actions with a simple box/cylinder concept.
+5. Check the worker's `/health` endpoint and hosting logs if the buttons report a connection error.
+
+Security: keep the worker behind HTTPS and a strong secret; never place either Groq or CAD worker secrets in browser JavaScript or commit them to GitHub.
+
+### Important integration limits
+- The FreeCAD worker generates primitive solids and exports STEP; it is not a full GUI instance and does not run FEA/CFD.
+- Cascade Studio/OpenCascade.js execution runs in a separate headless browser session. The external iframe on the page is not live-synchronized because of browser cross-origin security.
+- Supported Cascade primitives are box, cylinder, sphere, and cone. FreeCAD also supports torus in this bridge.
+- The FreeCAD Docker image is large and may need build-time adjustments depending on the hosting provider's architecture and available memory.
+- AI-generated geometry is preliminary. Check dimensions and all engineering assumptions before fabrication or safety-critical use.
