@@ -55,11 +55,15 @@ The repository now includes a secured CAD worker under `cad-worker/` and Vercel 
 - `cad-studio.html`: offers a FreeCAD macro download plus worker buttons for STEP generation and Cascade execution.
 
 ### Activate the real CAD worker
-1. Deploy `cad-worker/` as a Docker web service using its included Dockerfile.
-2. Set a long random `CAD_WORKER_TOKEN` on the worker; make sure the host serves it over HTTPS.
-3. Copy the worker's HTTPS base URL and the exact same token into Vercel as `CAD_WORKER_URL` and `CAD_WORKER_TOKEN`.
-4. Redeploy the Vercel site, then open the CAD Studio and test the actions with a simple box/cylinder concept.
-5. Check the worker's `/health` endpoint and hosting logs if the buttons report a connection error.
+A Render Blueprint is included at the repository root as `render.yaml`.
+
+1. Open https://dashboard.render.com/ and choose **New + → Blueprint**.
+2. Connect `dannywise093-crypto/NOVA-ENGINEERING-UNIVERSE`, select its default branch, and review the `engineering-universe-cad-worker` service.
+3. When prompted, enter a long random secret for `CAD_WORKER_TOKEN`. Keep it private. Deploy the Blueprint.
+4. Wait for the service to become live, then open its HTTPS URL plus `/health`. It must report `ok: true`, `freecad_available: true`, `cascade_playwright_available: true`, and `token_configured: true`.
+5. In Vercel **Project → Settings → Environment Variables**, add `CAD_WORKER_URL` (the worker HTTPS base URL without `/health` or a trailing slash) and `CAD_WORKER_TOKEN` (the exact same secret). Apply to Production and any Preview environment you use.
+6. Redeploy Vercel, open `cad-studio.html`, and test both worker buttons with a simple box.
+7. If the Docker build fails or the free instance runs out of memory, inspect the Render logs. The FreeCAD + Chromium image is large; a larger service may be needed and can cost money.
 
 Security: keep the worker behind HTTPS and a strong secret; never place either Groq or CAD worker secrets in browser JavaScript or commit them to GitHub.
 
