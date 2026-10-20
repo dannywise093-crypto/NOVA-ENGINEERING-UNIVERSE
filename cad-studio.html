@@ -61,7 +61,7 @@
  <p class="muted" style="font-size:12px">CAD control status: the page can send generated geometry to the secured CAD worker. Once that worker is deployed and configured, it can build a STEP file with FreeCAD and execute supported primitive models in a headless Cascade Studio session using OpenCascade.js. The embedded external Cascade Studio iframe is not synchronized, and no FEA/CFD or engineering validation is performed. Verify all engineering outputs independently.</p>
 </section>
 
-<section class="stage"><div class="stage-head"><strong>Cascade Studio · OpenCascade kernel</strong><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open full editor ↗</a></div><iframe title="Cascade Studio CAD editor" src="https://zalo.github.io/CascadeStudio/" loading="lazy" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer"></iframe></section>
+<section class="stage"><div class="stage-head"><strong>Cascade Studio · OpenCascade kernel</strong><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Open full editor ↗</a></div><p id="cascadeLoadNotice" class="muted" role="status" aria-live="polite" style="padding:10px 15px;margin:0;border-bottom:1px solid var(--line)">Starting Cascade Studio… The CAD kernel may take a while to initialize on mobile.</p><iframe id="cascadeEditorFrame" title="Cascade Studio CAD editor" src="https://zalo.github.io/CascadeStudio/" loading="eager" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer"></iframe></section>
 <section class="grid">
 <article class="card"><h2>01 · OpenCascade.js</h2><p>The geometry kernel is the foundation for precise solid operations. Cascade Studio already uses OpenCascade technology, so this avoids loading a second, competing CAD kernel into the same page.</p><a href="https://ocjs.org/" target="_blank" rel="noopener">Official docs →</a></article>
 <article class="card"><h2>02 · Cascade Studio</h2><p>Use parametric code to create solids, sketches, extrusions, revolutions, sweeps, booleans and fillets. The project documents STEP/STL/OBJ export and supported import workflows.</p><a href="https://github.com/zalo/CascadeStudio" target="_blank" rel="noopener">Source & examples →</a></article>
@@ -227,6 +227,31 @@
   }finally{button.disabled=false;button.textContent='Refresh status';}
  }
  button.addEventListener('click',refresh);refresh();
+})();
+</script>
+
+<script>
+(function(){
+ const frame=document.getElementById('cascadeEditorFrame');
+ const notice=document.getElementById('cascadeLoadNotice');
+ if(!frame||!notice)return;
+ let loaded=false;
+ const timeout=setTimeout(function(){
+  notice.textContent='Cascade Studio is taking longer than expected. This can happen when the external WebAssembly CAD kernel is slow or blocked on a mobile browser. Tap “Open full editor” to try it in a separate tab; the AI/3D preview and CAD worker controls on this page are separate.';
+ },25000);
+ frame.addEventListener('load',function(){
+  loaded=true;
+  notice.textContent='Cascade Studio page loaded. If its editor remains on “Loading CAD Kernel…”, use “Open full editor” or continue with the AI-generated 3D preview below.';
+  // Keep the warning visible: cross-origin restrictions prevent this page from checking kernel readiness inside the iframe.
+  clearTimeout(timeout);
+  setTimeout(function(){
+   if(loaded)notice.textContent='The external editor frame loaded, but this page cannot verify that its CAD kernel finished starting. If it is still loading, open it separately; the embedded editor is not synchronized with the remote CAD worker.';
+  },25000);
+ });
+ frame.addEventListener('error',function(){
+  clearTimeout(timeout);
+  notice.textContent='Cascade Studio could not be loaded in the embedded frame. Use “Open full editor” to open the external studio directly.';
+ });
 })();
 </script>
 </body></html>
