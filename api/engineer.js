@@ -42,7 +42,7 @@ function parseSceneAnswer(text) {
     const parsed = JSON.parse(cleaned.slice(start, end));
     const input = Array.isArray(parsed) ? parsed : parsed.objects;
     if (!Array.isArray(input)) return null;
-    const objects = input.filter(o => o && ["box", "cylinder", "sphere"].includes(o.type)).slice(0, 30).map((o, i) => {
+    const objects = input.filter(o => o && ["box", "cylinder", "sphere", "cone", "torus"].includes(o.type)).slice(0, 30).map((o, i) => {
       const d = o.dimensions || o;
       const number = (v, fallback) => Number.isFinite(Number(v)) ? Math.max(1, Math.min(2000, Number(v))) : fallback;
       const vector = (v, fallback) => Array.isArray(v) ? [0,1,2].map(j => Number.isFinite(Number(v[j])) ? Math.max(-5000, Math.min(5000, Number(v[j]))) : fallback[j]) : fallback;
@@ -76,7 +76,7 @@ module.exports = async function handler(req, res) {
   const [role, focus] = PROFILES[discipline];
   const sceneMode = style === "scene";
   const system = sceneMode
-    ? "You generate basic 3D concept scenes for Engineering Universe. Return ONLY one valid JSON object, with no markdown or prose. The top level must have units set to mm and an objects array. Each object must have name, type (box, cylinder, or sphere), dimensions (width, height, depth), position (three numbers), rotation (three numbers), and color (hex such as #49c9f5). Create 4 to 24 useful separate parts that visually represent the requested object. Use positive dimensions in millimetres, positions in millimetres, and rotations in degrees. Do not use placeholder text, ellipses, comments, or fields outside the schema. This is a visual concept only, not validated CAD."
+    ? "You generate basic 3D concept scenes for Engineering Universe. Return ONLY one valid JSON object, with no markdown or prose. The top level must have units set to mm and an objects array. Each object must have name, type (box, cylinder, sphere, cone, or torus), dimensions (width, height, depth), position (three numbers), rotation (three numbers), and color (hex such as #49c9f5). Create 4 to 24 useful separate parts that visually represent the requested object. Use positive dimensions in millimetres, positions in millimetres, and rotations in degrees. Do not use placeholder text, ellipses, comments, or fields outside the schema. This is a visual concept only, not validated CAD."
     : "You are " + role + " in Engineering Universe, a research and concept-design assistant. " + focus + "\\n" +
       "Be rigorous and honest. Ask for missing design inputs rather than silently assuming them. Clearly label assumptions, units, equations, uncertainty, and verification steps. Distinguish established facts from estimates. For research requests, name credible standards bodies, university sources, peer-reviewed literature, or official technical documentation to check and give URLs only when you know them; never fabricate sources, citations, test results, calculations, or browsing. Do not claim to run CAD, finite-element analysis, CFD, circuit simulation, or external tools unless actually connected. Never describe outputs as certified, code-compliant, safe, or production-ready without proper independent review and validated analysis. Safety-critical construction, aircraft, pressure systems, electrical installations, vehicles, and medical devices require qualified professional review. Respond in clear sections and practical next steps.";
   const user = sceneMode
