@@ -11,7 +11,7 @@ except Exception:
     sync_playwright = None
 TOKEN=os.environ.get("CAD_WORKER_TOKEN","")
 HOST=os.environ.get("CAD_WORKER_HOST","127.0.0.1")
-PORT=int(os.environ.get("CAD_WORKER_PORT","8787"))
+PORT=int(os.environ.get("PORT",os.environ.get("CAD_WORKER_PORT","8787")) )
 ALLOWED={"box","cylinder","sphere","cone","torus"}
 CASCADE_URL=os.environ.get("CASCADE_STUDIO_URL","https://zalo.github.io/CascadeStudio/")
 def make_cascade_code(objects):
