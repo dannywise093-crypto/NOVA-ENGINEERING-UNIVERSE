@@ -15,6 +15,19 @@
 <section class="hero"><div class="eyebrow">ADVANCED GEOMETRY WORKSPACE</div><h1>Real CAD Studio</h1><p>Use a browser-based OpenCascade CAD kernel for parametric solid modeling, then exchange supported CAD files with FreeCAD. Your existing Groq AI remains the engineering assistant; this workspace provides a more capable CAD modeling environment.</p><div class="row"><a class="btn primary" href="https://zalo.github.io/CascadeStudio/" target="_blank" rel="noopener">Launch Cascade Studio ↗</a><a class="btn" href="https://ocjs.org/" target="_blank" rel="noopener">OpenCascade.js docs ↗</a><a class="btn" href="https://www.freecad.org/" target="_blank" rel="noopener">FreeCAD ↗</a></div></section>
 <div class="warning"><strong>Mobile note:</strong> CAD engines use WebAssembly and WebGL and can be heavy on a phone. If the embedded editor does not load or feels cramped, tap <em>Launch Cascade Studio</em> to open it directly in a new tab. FreeCAD is a desktop application, not something this page can run natively on Android.</div>
 
+<section class="card" id="studio-readiness" style="margin:18px 0;border-color:#39728b">
+ <div class="eyebrow">LIVE CONNECTION CHECK</div><h2 style="font-size:22px;margin:8px 0">Studio & AI status</h2>
+ <p class="muted">These checks show server configuration and CAD-worker health. “Configured” does not mean the AI provider has been billed or a design has been validated.</p>
+ <div id="studioHealthGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px">
+  <div class="filebox"><strong>AI assistant</strong><p id="health-ai" class="muted" aria-live="polite">Checking…</p></div>
+  <div class="filebox"><strong>FreeCAD engine</strong><p id="health-freecad" class="muted" aria-live="polite">Checking…</p></div>
+  <div class="filebox"><strong>Cascade Studio</strong><p id="health-cascade" class="muted" aria-live="polite">Checking…</p></div>
+  <div class="filebox"><strong>OpenCascade.js</strong><p id="health-opencascade" class="muted" aria-live="polite">Checking…</p></div>
+ </div>
+ <div class="row"><button class="btn" id="refreshStudioHealth" type="button">Refresh connection status</button><a class="btn" href="https://engineering-universe-cad-worker.onrender.com/" target="_blank" rel="noopener">Open CAD worker status ↗</a></div>
+ <p id="health-checked" class="muted" role="status" aria-live="polite">Checking backend and AI configuration…</p>
+</section>
+
 <section class="card" id="ai-operator" style="margin:22px 0;border-color:#39728b">
  <div class="eyebrow">NATURAL-LANGUAGE CONTROL</div><h2 style="font-size:25px;margin:8px 0">AI Studio Operator</h2>
  <p>Describe what you want in plain language. Choose the engineering discipline and the kind of work; Engineering Universe will route the prompt to its Groq-powered engineering assistant.</p>
@@ -183,4 +196,48 @@
  function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}animate();
 })();
 </script>
-\n</body></html>
+\n<script>
+(()=> {
+ const labels = {
+  ready: "Ready — backend reports available",
+  degraded: "Worker is responding, but not fully ready",
+  unavailable: "Not available in worker",
+  not_configured: "Not configured in Vercel",
+  unreachable: "Worker cannot be reached",
+  unhealthy: "Worker health check failed",
+  unknown: "Could not verify",
+  configured_not_live_tested: "API key configured — provider not live-tested",
+  missing_key: "GROQ_API_KEY is missing",
+  automation_available: "Browser automation package available",
+  bundled_with_cascade: "Kernel is used through Cascade Studio"
+ };
+ const el=id=>document.getElementById(id);
+ function show(id,key,detail){
+  const node=el(id); if(!node)return;
+  node.textContent=labels[key]||key||"Unknown";
+  if(detail)node.textContent+=" · "+detail;
+ }
+ async function refresh(){
+  el("health-checked").textContent="Checking server-side configuration and CAD worker…";
+  for(const id of ["health-ai","health-freecad","health-cascade","health-opencascade"])el(id).textContent="Checking…";
+  try{
+   const r=await fetch("/api/cad-status",{cache:"no-store",headers:{"Accept":"application/json"}});
+   const d=await r.json();
+   if(!r.ok)throw new Error(d.error||"Status endpoint failed");
+   show("health-ai",d.ai&&d.ai.status);
+   show("health-freecad",d.freecad&&d.freecad.status);
+   show("health-cascade",d.cascade&&d.cascade.status);
+   show("health-opencascade",d.opencascade&&d.opencascade.status);
+   el("health-checked").textContent="Last checked: "+new Date(d.checkedAt||Date.now()).toLocaleString();
+   if(d.worker&&d.worker.message)el("health-checked").textContent+=" · "+d.worker.message;
+  }catch(e){
+   for(const id of ["health-ai","health-freecad","health-cascade","health-opencascade"])el(id).textContent="Status check failed";
+   el("health-checked").textContent="Could not check studio status. Confirm this page and /api/cad-status are deployed together.";
+  }
+ }
+ el("refreshStudioHealth").addEventListener("click",refresh);
+ refresh();
+})();
+</script>
+
+</body></html>
