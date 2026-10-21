@@ -601,4 +601,45 @@ const imageButton=byId("euGenerateImage");
 })();
 </script>
 
+<script>
+/* Independent, resilient Engineering Formula & Design AI handler. */
+(function(){
+ function initDesignPackage(){
+  const button=document.getElementById("euGeneratePackage");
+  const taskInput=document.getElementById("euDesignTask");
+  const status=document.getElementById("euPackageStatus");
+  const output=document.getElementById("euPackageOutput");
+  if(!button||!taskInput||!status||!output)return;
+  const fresh=button.cloneNode(true);
+  fresh.type="button";
+  button.replaceWith(fresh);
+  fresh.addEventListener("click",async function(event){
+   event.preventDefault();
+   const task=taskInput.value.trim();
+   if(task.length<8){status.textContent="Please describe the design in at least 8 characters.";return;}
+   fresh.disabled=true;fresh.textContent="Generating design…";
+   status.textContent="Connecting to the engineering AI. Please wait…";
+   output.textContent="Generating design requirements, example dimensions, formulas, assumptions, and starter CAD code…";
+   const controller=new AbortController();
+   const timeout=setTimeout(()=>controller.abort(),60000);
+   try{
+    const response=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({discipline:"mechanical",style:"design",task}),signal:controller.signal,cache:"no-store"});
+    const raw=await response.text();
+    let data;
+    try{data=JSON.parse(raw)}catch{throw new Error("Server returned an unreadable response (HTTP "+response.status+"). Try refreshing the site; if it repeats, the API deployment needs checking.");}
+    if(!response.ok)throw new Error(data.error||("Engineering AI request failed (HTTP "+response.status+")."));
+    if(typeof data.answer!=="string"||!data.answer.trim())throw new Error("The AI returned an empty answer. Check Groq model access and Vercel runtime logs.");
+    output.textContent=data.answer;
+    status.textContent="Design package received from "+(data.model||"the engineering AI")+". Verify all calculations and dimensions before use.";
+   }catch(error){
+    const message=error.name==="AbortError"?"The request timed out after 60 seconds. Please retry with a shorter design description.":(error.message||"Could not connect to the engineering AI.");
+    status.textContent="Engineering AI error: "+message;
+    output.textContent="No design package was received. Your request was not silently accepted. Please retry; if it keeps failing, share the exact error shown here.";
+   }finally{clearTimeout(timeout);fresh.disabled=false;fresh.textContent="Generate Design Package ↗";}
+  });
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initDesignPackage,{once:true});else initDesignPackage();
+})();
+</script>
+
 </body></html>
