@@ -57,8 +57,6 @@ module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Use POST." }); }
-  const key = process.env.GROQ_API_KEY;
-  if (!key) return res.status(503).json({ error: "GROQ_API_KEY is not configured in Vercel environment variables." });
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
   const discipline = String(body && body.discipline || "");
@@ -66,6 +64,16 @@ module.exports = async function handler(req, res) {
   const requestedStyle = String(body && body.style || "research");
   const style = Object.prototype.hasOwnProperty.call(STYLES, requestedStyle) || requestedStyle === "scene" ? requestedStyle : "research";
   if (!PROFILES[discipline]) return res.status(400).json({ error: "Choose a supported engineering studio." });
+  const keyVariableByDiscipline = {
+    mechanical: "GROQ_API_KEY_1", civil: "GROQ_API_KEY_1", electrical: "GROQ_API_KEY_1",
+    aerospace: "GROQ_API_KEY_2", chemical: "GROQ_API_KEY_2", materials: "GROQ_API_KEY_2",
+    robotics: "GROQ_API_KEY_3", automotive: "GROQ_API_KEY_3", energy: "GROQ_API_KEY_3",
+    fluids: "GROQ_API_KEY_4", biomedical: "GROQ_API_KEY_4", software: "GROQ_API_KEY_4"
+  };
+  const keyVariable = keyVariableByDiscipline[discipline];
+  // Use the discipline-specific key when configured; retain the old key as a safe migration fallback.
+  const key = process.env[keyVariable] || process.env.GROQ_API_KEY;
+  if (!key) return res.status(503).json({ error: keyVariable + " is not configured in Vercel Production. Add this variable for the selected engineering assistant (or configure GROQ_API_KEY as a shared fallback)." });
   if (task.length < 8) return res.status(400).json({ error: "Please provide a more detailed engineering task (at least 8 characters)." });
   if (task.length > 8000) return res.status(413).json({ error: "Task is too long. Keep it under 8,000 characters." });
   const [role, focus] = PROFILES[discipline];
