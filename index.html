@@ -603,6 +603,68 @@ const imageButton=byId("euGenerateImage");
 })();
 </script>
 
-<script src="/engineering-formula-design-ai.js" defer></script>
+<script>
+/* Formula & Design AI: inline handler so it does not depend on a separate JS asset loading. */
+(function () {
+  function initFormulaDesignAI() {
+    const original = document.getElementById("euGeneratePackage");
+    const input = document.getElementById("euDesignTask");
+    const status = document.getElementById("euPackageStatus");
+    const output = document.getElementById("euPackageOutput");
+    if (!original || !input || !status || !output) {
+      console.error("Formula & Design AI initialization failed: expected page elements are missing.");
+      return;
+    }
+    const button = original.cloneNode(true);
+    button.type = "button";
+    original.replaceWith(button);
+    status.textContent = "Formula & Design AI ready. Describe a design and tap Generate Design Package.";
+    button.addEventListener("click", async function (event) {
+      event.preventDefault();
+      if (button.disabled) return;
+      const task = input.value.trim();
+      if (task.length < 8) {
+        status.textContent = "Please describe the design in at least 8 characters.";
+        output.textContent = "Example: Design a small gearbox and explain its formulas, dimensions, materials, and assumptions.";
+        input.focus();
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Generating design…";
+      status.textContent = "Sending your request to Engineering Formula & Design AI…";
+      output.textContent = "Waiting for the engineering AI response…";
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+      try {
+        const response = await fetch("/api/engineer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ assistant: "formula-design-ai", discipline: "mechanical", style: "design", task }),
+          signal: controller.signal,
+          cache: "no-store"
+        });
+        const raw = await response.text();
+        let data;
+        try { data = JSON.parse(raw); }
+        catch (_) { throw new Error("Server returned an unreadable response (HTTP " + response.status + ")."); }
+        if (!response.ok) throw new Error(data.error || "AI request failed (HTTP " + response.status + ").");
+        if (!data || typeof data.answer !== "string" || !data.answer.trim()) throw new Error("The AI returned an empty response. Please retry.");
+        output.textContent = data.answer.trim();
+        status.textContent = "Design package received" + (data.model ? " • " + data.model : "") + ". Verify calculations before use.";
+      } catch (error) {
+        const message = error && error.name === "AbortError" ? "Request timed out after 60 seconds. Please retry." : (error && error.message ? error.message : "Could not connect to the engineering AI.");
+        status.textContent = "Formula & Design AI error: " + message;
+        output.textContent = "No design package was received. See the error above. The separate Ask this Engineering AI assistant is unchanged.";
+      } finally {
+        clearTimeout(timeout);
+        button.disabled = false;
+        button.textContent = "Generate Design Package ↗";
+      }
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initFormulaDesignAI, { once: true });
+  else initFormulaDesignAI();
+})();
+</script>
 
 </body></html>
