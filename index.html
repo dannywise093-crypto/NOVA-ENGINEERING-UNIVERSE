@@ -321,7 +321,7 @@ This is a restricted engineering command console, not an Android/Linux shell.</d
   <div class="id-panel"><div class="badge">GENERATED IMAGE</div><h3>Image preview</h3><div class="id-preview" id="euImagePreview"><span class="note">Your generated image will appear here.</span></div><a class="btn id-download" id="euImageDownload" download="engineering-concept.png">Download image ↓</a></div>
   <div class="id-panel"><div class="badge">FORMULAS + DIMENSIONS + 3D</div><h3>Engineering design package</h3>
    <label for="euDesignTask">What should the AI design?</label><textarea id="euDesignTask" placeholder="Example: design a small belt-driven gearbox. Explain the design, list dimensions and materials, show equations and assumptions, and create a simple 3D concept."></textarea>
-   <div class="actions"><button class="btn primary" id="euGeneratePackage">Generate Design Package ↗</button><button class="btn" id="euGenerate3D">Generate 3D Model</button></div>
+   <div class="actions"><button class="btn primary" id="euGeneratePackage" type="button" onclick="return window.euGeneratePackageAI(event)">Generate Design Package ↗</button><button class="btn" id="euGenerate3D">Generate 3D Model</button></div>
    <div class="id-status" id="euPackageStatus">Uses the existing Groq-backed engineering endpoint.</div><div class="id-output" id="euPackageOutput">Your formulas, parameter table, design notes, and starter CAD code will appear here.</div>
   </div>
   <div class="id-panel"><div class="badge">TECHNICAL DRAWING</div><h3>Generate a dimensioned 3-view drawing</h3><p class="note">Creates an editable/downloadable SVG drawing for a simple rectangular part from your dimensions.</p>
@@ -536,14 +536,6 @@ const imageButton=byId("euGenerateImage");
   }catch(e){const blob=localEngineeringSvg(prompt,value("euImageStyle")),url=URL.createObjectURL(blob),img=document.createElement("img");img.alt="Local engineering concept schematic fallback";img.src=url;byId("euImagePreview").replaceChildren(img);const dl=byId("euImageDownload");dl.href=url;dl.download="engineering-concept-schematic.svg";dl.style.display="inline-flex";status("euImageStatus","Image provider unavailable. A local SVG concept schematic was created without Pollinations or extra API keys; it is an illustrative drawing, not an AI-generated photo.")}
   finally{imageButton.disabled=false;imageButton.textContent="Generate Image ↗"}
  });
- const packageButton=byId("euGeneratePackage");
- if(packageButton)packageButton.addEventListener("click",async()=>{
-  const task=value("euDesignTask");if(task.length<8){status("euPackageStatus","Describe the design in more detail.");return}
-  packageButton.disabled=true;packageButton.textContent="Working…";status("euPackageStatus","Generating formulas, dimensions, design notes and starter CAD code…");
-  try{const res=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({assistant:"formula-design-ai",discipline:"mechanical",style:"design",task})});let d={};try{d=await res.json()}catch{}if(!res.ok)throw new Error(d.error||"Engineering AI request failed.");byId("euPackageOutput").textContent=d.answer||"The AI returned no design text.";status("euPackageStatus","Design package ready. Review assumptions and verification steps before use.")}
-  catch(e){status("euPackageStatus",e.message||"Could not reach engineering AI. Check GROQ_API_KEY and deployment logs.")}
-  finally{packageButton.disabled=false;packageButton.textContent="Generate Design Package ↗"}
- });
  const loadLastAI=byId("ucLoadLastAI");
  if(loadLastAI)loadLastAI.addEventListener("click",()=>{try{const raw=localStorage.getItem("eu-ai-generated-scene");if(!raw)throw new Error("No AI-generated scene saved on this device yet. Generate a 3D model first.");const scene=JSON.parse(raw);if(!window.EU3D||typeof window.EU3D.renderSpec!=="function")throw new Error("3D scene loader is not ready. Open Universe Creator and try again.");window.EU3D.renderSpec(scene);status("euPackageStatus","Last AI model loaded into Universe Creator.");document.getElementById("worldStudio")?.scrollIntoView({behavior:"smooth"})}catch(e){status("euPackageStatus",e.message||"Could not load saved model.")}});
  const modelButton=byId("euGenerate3D");
@@ -604,67 +596,59 @@ const imageButton=byId("euGenerateImage");
 </script>
 
 <script>
-/* Formula & Design AI: inline handler so it does not depend on a separate JS asset loading. */
-(function () {
-  function initFormulaDesignAI() {
-    const original = document.getElementById("euGeneratePackage");
-    const input = document.getElementById("euDesignTask");
-    const status = document.getElementById("euPackageStatus");
-    const output = document.getElementById("euPackageOutput");
-    if (!original || !input || !status || !output) {
-      console.error("Formula & Design AI initialization failed: expected page elements are missing.");
-      return;
-    }
-    const button = original.cloneNode(true);
-    button.type = "button";
-    original.replaceWith(button);
-    status.textContent = "Formula & Design AI ready. Describe a design and tap Generate Design Package.";
-    button.addEventListener("click", async function (event) {
-      event.preventDefault();
-      if (button.disabled) return;
-      const task = input.value.trim();
-      if (task.length < 8) {
-        status.textContent = "Please describe the design in at least 8 characters.";
-        output.textContent = "Example: Design a small gearbox and explain its formulas, dimensions, materials, and assumptions.";
-        input.focus();
-        return;
-      }
-      button.disabled = true;
-      button.textContent = "Generating design…";
-      status.textContent = "Sending your request to Engineering Formula & Design AI…";
-      output.textContent = "Waiting for the engineering AI response…";
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 60000);
-      try {
-        const response = await fetch("/api/engineer", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({ assistant: "formula-design-ai", discipline: "mechanical", style: "design", task }),
-          signal: controller.signal,
-          cache: "no-store"
-        });
-        const raw = await response.text();
-        let data;
-        try { data = JSON.parse(raw); }
-        catch (_) { throw new Error("Server returned an unreadable response (HTTP " + response.status + ")."); }
-        if (!response.ok) throw new Error(data.error || "AI request failed (HTTP " + response.status + ").");
-        if (!data || typeof data.answer !== "string" || !data.answer.trim()) throw new Error("The AI returned an empty response. Please retry.");
-        output.textContent = data.answer.trim();
-        status.textContent = "Design package received" + (data.model ? " • " + data.model : "") + ". Verify calculations before use.";
-      } catch (error) {
-        const message = error && error.name === "AbortError" ? "Request timed out after 60 seconds. Please retry." : (error && error.message ? error.message : "Could not connect to the engineering AI.");
-        status.textContent = "Formula & Design AI error: " + message;
-        output.textContent = "No design package was received. See the error above. The separate Ask this Engineering AI assistant is unchanged.";
-      } finally {
-        clearTimeout(timeout);
-        button.disabled = false;
-        button.textContent = "Generate Design Package ↗";
-      }
-    });
+/* Formula & Design AI direct click handler. The button calls this function from its markup. */
+window.euGeneratePackageAI = async function (event) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  const button = document.getElementById("euGeneratePackage");
+  const input = document.getElementById("euDesignTask");
+  const status = document.getElementById("euPackageStatus");
+  const output = document.getElementById("euPackageOutput");
+  if (!button || !input || !status || !output) {
+    alert("Engineering Formula & Design AI could not initialize: a required page element is missing.");
+    return false;
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initFormulaDesignAI, { once: true });
-  else initFormulaDesignAI();
-})();
-</script>
+  if (button.dataset.busy === "true") return false;
+  const task = input.value.trim();
+  if (task.length < 8) {
+    status.textContent = "Please describe the design in at least 8 characters.";
+    output.textContent = "Example: Design a small gearbox and explain its formulas, dimensions, materials, and assumptions.";
+    input.focus();
+    return false;
+  }
+  button.dataset.busy = "true";
+  button.disabled = true;
+  button.textContent = "Generating design…";
+  status.textContent = "Button works. Connecting to Engineering Formula & Design AI…";
+  output.textContent = "Waiting for the AI response…";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch("/api/engineer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ assistant: "formula-design-ai", discipline: "mechanical", style: "design", task }),
+      signal: controller.signal,
+      cache: "no-store"
+    });
+    const raw = await response.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch (_) { throw new Error("Server returned an unreadable response (HTTP " + response.status + ")."); }
+    if (!response.ok) throw new Error(data.error || "AI request failed (HTTP " + response.status + ").");
+    if (!data || typeof data.answer !== "string" || !data.answer.trim()) throw new Error("The AI returned an empty response.");
+    output.textContent = data.answer.trim();
+    status.textContent = "Design package received" + (data.model ? " • " + data.model : "") + ". Verify calculations before use.";
+  } catch (error) {
+    const message = error && error.name === "AbortError" ? "Request timed out after 60 seconds." : (error && error.message ? error.message : "Could not connect to the engineering AI.");
+    status.textContent = "Formula & Design AI error: " + message;
+    output.textContent = "The button handler ran, but no design package was received.";
+  } finally {
+    clearTimeout(timeout);
+    button.dataset.busy = "false";
+    button.disabled = false;
+    button.textContent = "Generate Design Package ↗";
+  }
+  return false;
+};</script>
 
 </body></html>
