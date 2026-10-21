@@ -29,4 +29,39 @@
 </div><div class="actions"><button id="runCascade" disabled>Run in Cascade + OpenCascade</button><button id="buildStep" disabled>Build STEP with FreeCAD</button><button id="downloadScene" disabled>Download scene JSON</button></div><p class="small muted">CAD actions require the secured worker to be deployed and configured. Generated shapes are concept geometry, not validated engineering. The embedded CAD editor is not live-synchronized.</p></section>
 <section class="panel warn"><b>Important limitations</b><p class="small">This is not a cloud-scale ChatGPT replacement. Smaller local models can make mistakes and may be slow or fail on phones without WebGPU or enough memory. CAD worker actions are attempted only when you press the relevant button; this page does not claim they succeeded unless the worker returns success. The AI does not validate dimensions, structural safety, or manufacturing suitability.</p></section>
 </main>
+<script>
+/* Keep Send usable if the ES module cannot load. */
+window.__novaModuleReady = false;
+(() => {
+  const send = document.getElementById("send"), prompt = document.getElementById("prompt");
+  const log = document.getElementById("log"), status = document.getElementById("status");
+  if (!send || !prompt || !log || !status) return;
+  send.disabled = false;
+  send.addEventListener("click", async () => {
+    if (window.__novaModuleReady) return;
+    const question = prompt.value.trim();
+    if (!question || send.dataset.fallbackBusy === "1") return;
+    send.dataset.fallbackBusy = "1"; send.disabled = true; prompt.value = "";
+    status.textContent = "NOVA's main script did not load. Trying the free public text service; avoid private or confidential prompts.";
+    const add = (who, text) => {
+      const p = document.createElement("p"); p.className = "msg";
+      const b = document.createElement("b"); b.textContent = who;
+      const span = document.createElement("span"); span.textContent = text;
+      p.append(b, span); log.append(p); log.scrollTop = log.scrollHeight;
+    };
+    add("You", question);
+    try {
+      const response = await fetch("https://text.pollinations.ai/" + encodeURIComponent(question.slice(0, 3000)), {headers: {"Accept":"text/plain"}, cache:"no-store"});
+      if (!response.ok) throw new Error("Free text service returned HTTP " + response.status);
+      const answer = (await response.text()).trim();
+      if (!answer) throw new Error("Free text service returned an empty answer.");
+      add("NOVA (free fallback)", answer);
+      status.textContent = "Reply received from the public free text fallback. Availability and limits depend on that service.";
+    } catch (error) {
+      status.textContent = "Send failed: " + (error && error.message || String(error)) + ". Refresh and try again.";
+      add("NOVA", "I couldn't get a response. " + (error && error.message || String(error)));
+    } finally { send.disabled = false; delete send.dataset.fallbackBusy; }
+  });
+})();
+</script>
 <script type="module" src="/free-ai.js"></script></body></html>
