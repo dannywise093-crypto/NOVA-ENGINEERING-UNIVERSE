@@ -623,7 +623,7 @@ const imageButton=byId("euGenerateImage");
    const controller=new AbortController();
    const timeout=setTimeout(()=>controller.abort(),60000);
    try{
-    const response=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({discipline:"mechanical",style:"design",task}),signal:controller.signal,cache:"no-store"});
+    const response=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({assistant:"formula-design-ai",discipline:"mechanical",style:"design",task}),signal:controller.signal,cache:"no-store"});
     const raw=await response.text();
     let data;
     try{data=JSON.parse(raw)}catch{throw new Error("Server returned an unreadable response (HTTP "+response.status+"). Try refreshing the site; if it repeats, the API deployment needs checking.");}
