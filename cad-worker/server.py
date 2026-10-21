@@ -1,4 +1,4 @@
-import os, json, tempfile, secrets, base64
+import os, json, tempfile, secrets, base64, math
 from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 try:
@@ -59,16 +59,53 @@ def make_shape(item):
     shape.rotate(App.Vector(x,y,z),App.Vector(0,1,0),ry)
     shape.rotate(App.Vector(x,y,z),App.Vector(0,0,1),rz)
     return shape
+def simulate_beam(params):
+    """Run a bounded Euler-Bernoulli cantilever calculation with SI inputs."""
+    if not isinstance(params,dict):
+        raise ValueError("params must be an object.")
+    def bounded(key,low,high):
+        value=params.get(key)
+        if isinstance(value,bool) or not isinstance(value,(int,float)):
+            raise ValueError(key+" must be a number.")
+        value=float(value)
+        if not (math.isfinite(value) and low<=value<=high):
+            raise ValueError(key+" is outside the supported range.")
+        return value
+    length_m=bounded("lengthM",0.001,10)
+    force_n=bounded("forceN",0,1000000)
+    modulus=bounded("elasticModulusPa",1000000,1000000000000)
+    inertia=bounded("secondMomentOfAreaM4",1e-12,1)
+    section=bounded("sectionModulusM3",1e-12,1)
+    allowable=bounded("allowableStressPa",1,10000000000)
+    deflection=force_n*length_m**3/(3*modulus*inertia)
+    moment=force_n*length_m
+    stress=moment/section
+    fos=(allowable/stress) if stress>0 else None
+    return {"ok":True,"status":"completed",
+        "engine":"Euler-Bernoulli analytical beam model",
+        "model":"Prismatic cantilever beam with a point load at its free end; linear-elastic, small-deflection assumptions.",
+        "inputsSI":{"lengthM":length_m,"forceN":force_n,"elasticModulusPa":modulus,
+            "secondMomentOfAreaM4":inertia,"sectionModulusM3":section,"allowableStressPa":allowable},
+        "resultsSI":{"tipDeflectionM":deflection,"rootBendingMomentNm":moment,
+            "rootBendingStressPa":stress,"factorOfSafetyAgainstSuppliedAllowable":fos},
+        "equations":{"tipDeflection":"delta = F L^3 / (3 E I)","rootMoment":"M = F L",
+            "maximumBendingStress":"sigma = M / Z","factorOfSafety":"FoS = allowable_stress / calculated_stress"},
+        "validation":{"finiteResults":all(math.isfinite(v) for v in [deflection,moment,stress]),"units":"SI"},
+        "limitations":["Analytical beam theory only; this is not finite-element analysis (FEA).",
+            "Assumes a prismatic cantilever, end point load, linear elasticity, and small deflection.",
+            "Does not cover fatigue, buckling, stress concentrations, joints, plasticity, or manufacturing defects.",
+            "Independent engineering review is required before real-world use."]}
+
 class Handler(BaseHTTPRequestHandler):
     def send_json(self,code,obj):
-        raw=json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(raw))); self.end_headers(); self.wfile.write(raw)
+        raw=json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type","application/json; charset=utf-8"); self.send_header("X-Content-Type-Options","nosniff"); self.send_header("Content-Length",str(len(raw))); self.end_headers(); self.wfile.write(raw)
     def do_GET(self):
         path=urlsplit(self.path).path
         if path=="/health":
             ready=bool(TOKEN and App and Part and sync_playwright)
             self.send_json(200 if ready else 503,{"ok":ready,"freecad_available":bool(App and Part),"cascade_playwright_available":bool(sync_playwright),"token_configured":bool(TOKEN)})
         elif path=="/":
-            self.send_json(200,{"service":"Engineering Universe CAD worker","status":"running","health":"/health","endpoints":["POST /v1/build-step","POST /v1/cascade-run"]})
+            self.send_json(200,{"service":"Engineering Universe CAD worker","status":"running","health":"/health","endpoints":["POST /v1/build-step","POST /v1/cascade-run","POST /v1/simulate-beam"]})
         else: self.send_json(404,{"error":"Not found"})
     def do_POST(self):
         path=urlsplit(self.path).path
@@ -81,26 +118,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             payload=json.loads(self.rfile.read(length))
             if path=="/v1/simulate-beam":
-                params=payload.get("params",{})
-                if not isinstance(params,dict): raise ValueError("params must be an object.")
-                def bounded(key,low,high):
-                    value=params.get(key)
-                    if isinstance(value,bool) or not isinstance(value,(int,float)): raise ValueError(key+" must be a number.")
-                    value=float(value)
-                    if not (math.isfinite(value) and low<=value<=high): raise ValueError(key+" is outside the supported range.")
-                    return value
-                import math
-                length_m=bounded("lengthM",0.001,10)
-                force_n=bounded("forceN",0,1000000)
-                modulus=bounded("elasticModulusPa",1000000,1000000000000)
-                inertia=bounded("secondMomentOfAreaM4",1e-12,1)
-                section=bounded("sectionModulusM3",1e-12,1)
-                allowable=bounded("allowableStressPa",1,10000000000)
-                deflection=force_n*length_m**3/(3*modulus*inertia)
-                moment=force_n*length_m
-                stress=moment/section
-                fos=(allowable/stress) if stress>0 else None
-                self.send_json(200,{"ok":True,"status":"completed","engine":"Euler-Bernoulli analytical beam model","model":"Prismatic cantilever beam with a point load at its free end; linear-elastic, small-deflection assumptions.","inputsSI":{"lengthM":length_m,"forceN":force_n,"elasticModulusPa":modulus,"secondMomentOfAreaM4":inertia,"sectionModulusM3":section,"allowableStressPa":allowable},"resultsSI":{"tipDeflectionM":deflection,"rootBendingMomentNm":moment,"rootBendingStressPa":stress,"factorOfSafetyAgainstSuppliedAllowable":fos},"equations":{"tipDeflection":"delta = F L^3 / (3 E I)","rootMoment":"M = F L","maximumBendingStress":"sigma = M / Z","factorOfSafety":"FoS = allowable_stress / calculated_stress"},"validation":{"finiteResults":all(math.isfinite(v) for v in [deflection,moment,stress]),"units":"SI"},"limitations":["This is analytical beam theory, not finite-element analysis (FEA).","Assumes a prismatic cantilever, end point load, linear elasticity, and small deflection.","Does not cover fatigue, buckling, stress concentrations, joints, plasticity, or manufacturing defects.","Independent engineering review is required before real-world use."]})
+                result=simulate_beam(payload.get("params",{}))
+                self.send_json(200,result)
                 return
             objects=payload.get("scene",{}).get("objects",[])
             if path=="/v1/cascade-run":
