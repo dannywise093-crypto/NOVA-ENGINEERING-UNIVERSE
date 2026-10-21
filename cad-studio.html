@@ -61,6 +61,22 @@
  <p class="muted" style="font-size:12px">CAD control status: the page can send generated geometry to the secured CAD worker. Once that worker is deployed and configured, it can build a STEP file with FreeCAD and execute supported primitive models in a headless Cascade Studio session using OpenCascade.js. The embedded external Cascade Studio iframe is not synchronized, and no FEA/CFD or engineering validation is performed. Verify all engineering outputs independently.</p>
 </section>
 
+<section class="card" id="engineering-simulation" style="margin:22px 0;border-color:#39728b">
+ <div class="eyebrow">ENGINEERING SIMULATION · FIRST EXECUTABLE MODEL</div>
+ <h2 style="font-size:25px;margin:8px 0">Cantilever Beam Analysis</h2>
+ <p class="muted">Runs a server-side Euler–Bernoulli analytical model through the secured Render worker. This is a real calculation execution, but it is <strong>not finite-element analysis (FEA)</strong> and does not validate a real part.</p>
+ <form id="beamSimulationForm" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+  <label>Beam length (m)<input name="lengthM" type="number" min="0.001" max="10" step="any" value="1" required style="display:block;width:100%;padding:10px;background:#091321;color:#edf5ff;border:1px solid #3a5873;border-radius:7px"></label>
+  <label>End force (N)<input name="forceN" type="number" min="0" max="1000000" step="any" value="100" required style="display:block;width:100%;padding:10px;background:#091321;color:#edf5ff;border:1px solid #3a5873;border-radius:7px"></label>
+  <label>Elastic modulus E (Pa)<input name="elasticModulusPa" type="number" min="1000000" max="1000000000000" step="any" value="200000000000" required style="display:block;width:100%;padding:10px;background:#091321;color:#edf5ff;border:1px solid #3a5873;border-radius:7px"></label>
+  <label>Second moment I (m⁴)<input name="secondMomentOfAreaM4" type="number" min="0.000000000001" max="1" step="any" value="0.000001" required style="display:block;width:100%;padding:10px;background:#091321;color:#edf5ff;border:1px solid #3a5873;border-radius:7px"></label>
+  <label>Section modulus Z (m³)<input name="sectionModulusM3" type="number" min="0.000000000001" max="1" step="any" value="0.00001" required style="display:block;width:100%;padding:10px;background:#091321;color:#edf5ff;border:1px solid #3a5873;border-radius:7px"></label>
+  <label>Allowable stress (Pa)<input name="allowableStressPa" type="number" min="1" max="10000000000" step="any" value="150000000" required style="display:block;width:100%;padding:10px;background:#091321;color:#edf5ff;border:1px solid #3a5873;border-radius:7px"></label>
+  <div style="grid-column:1/-1"><button class="btn primary" id="runBeamSimulation" type="submit">Execute beam analysis ↗</button></div>
+ </form>
+ <p id="beamSimulationStatus" class="muted" role="status" aria-live="polite">Waiting for a simulation request. Worker must be deployed and configured.</p>
+ <pre id="beamSimulationOutput" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;background:#070b11;border:1px solid #2a3b50;border-radius:9px;padding:15px;display:none"></pre>
+</section>
 <section class="card" id="cascadeDiagnostics" style="margin:18px 0;border-color:#a77937">
  <div class="eyebrow">MOBILE KERNEL TROUBLESHOOTING</div>
  <h2 style="font-size:22px;margin:8px 0">Cascade Studio startup diagnostics</h2>
@@ -134,7 +150,7 @@
   e.preventDefault();const task=prompt.value.trim();if(task.length<8){status.textContent='Please describe the engineering task in at least 8 characters.';return;}
   run.disabled=true;run.textContent='Working…';output.style.display='block';output.textContent='';actions.hidden=true;lastScene=null;status.textContent='Sending your prompt to the selected engineering studio…';
   try{
-   const response=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:discipline.value,style:taskStyle.value,task:task+'\\n\\nRequested tool targets (availability is not proof of live execution): '+Array.from(document.querySelectorAll('input[name="studioTool"]:checked')).map(x=>x.value).join(', ')})});
+   const response=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:discipline.value,style:taskStyle.value,task:task+'\n\nRequested tool targets (availability is not proof of live execution): '+Array.from(document.querySelectorAll('input[name="studioTool"]:checked')).map(x=>x.value).join(', ')})});
    let data;try{data=await response.json()}catch{throw new Error('The server returned an unreadable response. Check that the latest Vercel deployment is ready.');}
    if(!response.ok)throw new Error(data.error||'The AI request failed.');
    if(data.scene){
@@ -293,6 +309,29 @@
   try{frame.src='https://zalo.github.io/CascadeStudio/?reload='+Date.now();}catch(e){notice.textContent='Could not reload the embedded editor. Open the standalone studio instead.';}
  });
  check();
+})();
+</script>
+<script>
+(()=>{
+ const form=document.getElementById('beamSimulationForm');
+ if(!form)return;
+ const status=document.getElementById('beamSimulationStatus'),output=document.getElementById('beamSimulationOutput'),button=document.getElementById('runBeamSimulation');
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const params={};
+  for(const [key,value] of new FormData(form).entries())params[key]=Number(value);
+  if(Object.values(params).some(v=>!Number.isFinite(v))){status.textContent='Enter valid numeric values for every field.';return;}
+  button.disabled=true;button.textContent='Executing…';status.textContent='Sending the model to the secured engineering worker…';output.style.display='block';output.textContent='Running analytical model…';
+  try{
+   const response=await fetch('/api/cad-simulation',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({params})});
+   const data=await response.json().catch(()=>({error:'Worker returned unreadable data.'}));
+   if(!response.ok)throw new Error(data.error||('Simulation request failed (HTTP '+response.status+').'));
+   if(data.status!=='completed'||!data.resultsSI)throw new Error('Worker did not confirm a completed simulation.');
+   output.textContent='EXECUTION STATUS: '+data.status+'\nENGINE: '+data.engine+'\nMODEL: '+data.model+'\n\nINPUTS (SI)\n'+JSON.stringify(data.inputsSI,null,2)+'\n\nRESULTS (SI)\n'+JSON.stringify(data.resultsSI,null,2)+'\n\nEQUATIONS\n'+JSON.stringify(data.equations,null,2)+'\n\nLIMITATIONS\n• '+(data.limitations||[]).join('\n• ');
+   status.textContent='Calculation executed by the Render worker. This is analytical beam theory, not FEA; verify assumptions and inputs independently.';
+  }catch(error){output.textContent='No completed simulation result.\n'+(error.message||'Unknown error');status.textContent='Simulation unavailable: '+(error.message||'check CAD_WORKER_URL, CAD_WORKER_TOKEN and Render logs.');}
+  finally{button.disabled=false;button.textContent='Execute beam analysis ↗';}
+ });
 })();
 </script>
 </body></html>
