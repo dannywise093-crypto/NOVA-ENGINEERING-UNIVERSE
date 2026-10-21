@@ -8,6 +8,17 @@ function withTimeout(ms) {
 function clean(value, max = 300) {
   return String(value || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, max);
 }
+function abstractFromInvertedIndex(index) {
+  if (!index || typeof index !== "object") return "";
+  const words = [];
+  for (const [word, positions] of Object.entries(index)) {
+    if (!Array.isArray(positions)) continue;
+    for (const position of positions) {
+      if (Number.isInteger(position) && position >= 0 && position < 5000) words[position] = word;
+    }
+  }
+  return clean(words.filter(Boolean).join(" "), 1200);
+}
 async function getJson(url) {
   const timeout = withTimeout(6500);
   try {
@@ -43,6 +54,7 @@ async function researchEngineering(task, discipline) {
     records.push({
       title, url, year: yearOf(item.published && item.published["date-parts"]),
       publisher: clean(item.publisher, 120), venue: clean(item["container-title"] && item["container-title"][0], 160),
+      abstract: clean(item.abstract, 1200), openAccessUrl: "",
       source: "Crossref scholarly metadata", doi: clean(item.DOI, 100)
     });
   }
@@ -56,6 +68,8 @@ async function researchEngineering(task, discipline) {
       title, url, year: item.publication_year || null,
       publisher: clean(location.source && location.source.display_name, 120),
       venue: clean(location.source && location.source.display_name, 160),
+      abstract: abstractFromInvertedIndex(item.abstract_inverted_index),
+      openAccessUrl: clean(item.open_access && item.open_access.oa_url, 500),
       source: "OpenAlex scholarly metadata", doi: clean(item.doi, 100)
     });
   }
