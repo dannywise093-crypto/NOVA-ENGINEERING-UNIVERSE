@@ -17,13 +17,13 @@ module.exports = async function handler(req, res) {
     return res.status(413).json({ error: "Request is missing or too large." });
   }
 
-  const workerUrl = String(process.env.ENGINEERING_WORKER_URL || "").trim().replace(/\/$/, "");
-  const token = process.env.ENGINEERING_WORKER_TOKEN;
+  const workerUrl = String(process.env.CAD_WORKER_URL || "").trim().replace(/\/$/, "");
+  const token = process.env.CAD_WORKER_TOKEN;
   if (!workerUrl || !token) {
     return res.status(503).json({
       ok: false,
       status: "worker_not_configured",
-      message: "The CAD/simulation worker is not connected yet. Configure ENGINEERING_WORKER_URL and ENGINEERING_WORKER_TOKEN in Vercel, and ENGINEERING_WORKER_TOKEN on the worker service."
+      message: "The CAD/simulation worker is not connected yet. Configure CAD_WORKER_URL and CAD_WORKER_TOKEN in Vercel, and CAD_WORKER_TOKEN on the existing Render CAD worker."
     });
   }
 
@@ -31,19 +31,35 @@ module.exports = async function handler(req, res) {
   if (!["status", "run"].includes(action)) {
     return res.status(400).json({ error: "action must be status or run." });
   }
-  if (action === "run" && !["cad_box", "cantilever_beam"].includes(body.jobType)) {
-    return res.status(400).json({ error: "Supported jobs: cad_box and cantilever_beam." });
+  if (action === "run" && !["cad_box", "freecad_scene", "cascade_scene", "cantilever_beam"].includes(body.jobType)) {
+    return res.status(400).json({ error: "Supported jobs: cad_box, freecad_scene, cascade_scene, cantilever_beam." });
   }
 
   try {
-    const response = await fetch(workerUrl + (action === "status" ? "/health" : "/jobs"), {
+    let endpoint = "/health";
+    let payload = null;
+    if (action === "run") {
+      if (body.jobType === "cantilever_beam") {
+        endpoint = "/v1/simulate-beam";
+        payload = { params: body.params || {} };
+      } else {
+        endpoint = body.jobType === "cascade_scene" ? "/v1/cascade-run" : "/v1/build-step";
+        if (body.jobType === "cad_box") {
+          const p = body.params || {};
+          payload = { scene: { objects: [{ type: "box", name: "Generated box", dimensions: { width: p.widthMm, height: p.heightMm, depth: p.lengthMm } }] } };
+        } else {
+          payload = { scene: body.scene };
+        }
+      }
+    }
+    const response = await fetch(workerUrl + endpoint, {
       method: action === "status" ? "GET" : "POST",
       headers: {
         "Authorization": "Bearer " + token,
         ...(action === "run" ? { "Content-Type": "application/json" } : {})
       },
-      ...(action === "run" ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(45000)
+      ...(action === "run" ? { body: JSON.stringify(payload) } : {}),
+      signal: AbortSignal.timeout(body.jobType === "cascade_scene" ? 110000 : 45000)
     });
     const text = await response.text();
     let result;
