@@ -102,7 +102,7 @@ function addMessage(role, message) {
 function setBusy(value) {
   busy = value;
   $("load").disabled = value;
-  $("send").disabled = value || !engine;
+  $("send").disabled = value;
   $("generateScene").disabled = value || !engine;
 }
 function extractJson(text) {
@@ -223,24 +223,47 @@ $("load").addEventListener("click", async () => {
 
 $("send").addEventListener("click", async () => {
   const prompt = $("prompt").value.trim();
-  if (!prompt || !engine || busy) return;
+  if (!prompt || busy) return;
   setBusy(true);
   $("prompt").value = "";
   addMessage("user", prompt);
-  history.push({ role: "user", content: prompt });
   try {
-    const result = await engine.chat.completions.create({
-      messages: history,
-      temperature: 0.6,
-      max_tokens: 700
-    });
-    const answer = result.choices?.[0]?.message?.content || "No response returned.";
-    history.push({ role: "assistant", content: answer });
+    let answer;
+    if (engine) {
+      history.push({ role: "user", content: prompt });
+      try {
+        const result = await engine.chat.completions.create({
+          messages: history,
+          temperature: 0.6,
+          max_tokens: 700
+        });
+        answer = result.choices?.[0]?.message?.content || "No response returned.";
+        history.push({ role: "assistant", content: answer });
+        status("Response generated locally on this device.");
+      } catch (error) {
+        history.pop();
+        throw error;
+      }
+    } else {
+      status("Local model is not loaded. Trying NOVA's secure website AI service…");
+      const response = await fetch("/api/engineer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ discipline: "mechanical", style: "research", task: prompt })
+      });
+      let data;
+      try { data = await response.json(); }
+      catch { throw new Error("NOVA's website AI returned an unreadable response."); }
+      if (!response.ok) throw new Error(data.error || ("Website AI request failed (HTTP " + response.status + ")."));
+      answer = String(data.answer || "").trim();
+      if (!answer) throw new Error("NOVA's website AI returned an empty answer.");
+      status("Response received from NOVA's secure website AI service. Local model remains unloaded.");
+    }
     addMessage("assistant", answer);
-    status("Response generated locally on this device.");
   } catch (error) {
-    history.pop();
-    status("Generation failed: " + (error && error.message || String(error)));
+    const message = error && error.message || String(error);
+    status("Could not send to NOVA: " + message + (engine ? "" : " If the website AI service is not configured, local chat requires a compatible WebGPU browser and a loaded model."));
+    addMessage("assistant", "I couldn't answer this message. " + message);
   } finally {
     setBusy(false);
     $("load").disabled = Boolean(engine);
