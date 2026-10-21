@@ -12,6 +12,14 @@ const history = [{
 }];
 
 function status(message) { $("status").textContent = message; }
+window.__novaModuleReady = true;
+async function freeTextFallback(prompt) {
+  const response = await fetch("https://text.pollinations.ai/" + encodeURIComponent(prompt.slice(0, 3000)), {headers: {"Accept":"text/plain"}, cache:"no-store"});
+  if (!response.ok) throw new Error("Free public text service returned HTTP " + response.status + ".");
+  const answer = (await response.text()).trim();
+  if (!answer) throw new Error("Free public text service returned an empty answer.");
+  return answer;
+}
 let previewRenderer = null, previewScene = null, previewCamera = null, previewControls = null, previewResizeObserver = null, previewAnimation = 0;
 function renderScenePreview(sceneData) {
   const host = $("scenePreview");
@@ -245,20 +253,25 @@ $("send").addEventListener("click", async () => {
         throw error;
       }
     } else {
-      status("Local model is not loaded. Trying NOVA's secure website AI service…");
-      const response = await fetch("/api/engineer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ discipline: "mechanical", style: "research", task: prompt })
-      });
-      let data;
-      try { data = await response.json(); }
-      catch { throw new Error("NOVA's website AI returned an unreadable response."); }
-      if (!response.ok) throw new Error(data.error || ("Website AI request failed (HTTP " + response.status + ")."));
-      answer = String(data.answer || "").trim();
-      if (!answer) throw new Error("NOVA's website AI returned an empty answer.");
-      status("Response received from NOVA's secure website AI service. Local model remains unloaded.");
-    }
+      status("Local model is not loaded. Trying the configured website AI service…");
+      try {
+        const response = await fetch("/api/engineer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ discipline: "mechanical", style: "research", task: prompt })
+        });
+        let data;
+        try { data = await response.json(); }
+        catch { throw new Error("Website AI returned an unreadable response."); }
+        if (!response.ok) throw new Error(data.error || ("Website AI request failed (HTTP " + response.status + ")."));
+        answer = String(data.answer || "").trim();
+        if (!answer) throw new Error("Website AI returned an empty answer.");
+        status("Response received from NOVA's website AI service.");
+      } catch (websiteError) {
+        status("Website AI is unavailable. Trying the free public text fallback; avoid private or confidential prompts…");
+        answer = await freeTextFallback("You are NOVA, an engineering and coding assistant. Be accurate, state assumptions and units, and warn that concepts are not safety-validated. User question: " + prompt);
+        status("Reply received from the free public text fallback. Availability and limits depend on that service.");
+      }
     addMessage("assistant", answer);
   } catch (error) {
     const message = error && error.message || String(error);
