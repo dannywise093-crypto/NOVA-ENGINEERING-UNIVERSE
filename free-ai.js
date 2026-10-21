@@ -190,10 +190,22 @@ $("load").addEventListener("click", async () => {
   setBusy(true);
   status("Checking WebGPU and loading the model. First load can take several minutes and use substantial mobile data.");
   try {
-    if (!("gpu" in navigator)) {
-      throw new Error("WebGPU is unavailable in this browser. Local inference needs a compatible browser and device.");
+    if (!("gpu" in navigator) || !navigator.gpu) {
+      throw new Error("This browser does not expose WebGPU. Update Chrome and Android System WebView, then try again. If WebGPU is still unavailable, this device/browser cannot run NOVA Local AI locally.");
     }
-    engine = await CreateMLCEngine($("model").value, {
+    status("Checking whether this device can create a WebGPU adapter…");
+    let adapter;
+    try {
+      adapter = await navigator.gpu.requestAdapter();
+    } catch (adapterError) {
+      throw new Error("WebGPU was detected but the device could not start it: " + (adapterError?.message || String(adapterError)));
+    }
+    if (!adapter) {
+      throw new Error("WebGPU is present, but no compatible graphics adapter is available. Try the latest Chrome, disable battery saver, close other heavy apps, and reload. No model has been downloaded yet.");
+    }
+    const modelId = $("model").value;
+    status("WebGPU is available. Preparing " + modelId + "… The first load downloads model files and may take several minutes.");
+    engine = await CreateMLCEngine(modelId, {
       initProgressCallback: progress => status(progress.text || "Loading local model…")
     });
     $("send").disabled = false;
