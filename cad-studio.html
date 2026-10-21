@@ -150,7 +150,7 @@
   e.preventDefault();const task=prompt.value.trim();if(task.length<8){status.textContent='Please describe the engineering task in at least 8 characters.';return;}
   run.disabled=true;run.textContent='Working…';output.style.display='block';output.textContent='';actions.hidden=true;lastScene=null;status.textContent='Sending your prompt to the selected engineering studio…';
   try{
-   const response=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:discipline.value,style:taskStyle.value,task:task+'\\n\\nRequested tool targets (availability is not proof of live execution): '+Array.from(document.querySelectorAll('input[name="studioTool"]:checked')).map(x=>x.value).join(', ')})});
+   const response=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:discipline.value,style:taskStyle.value,task:task+'\n\nRequested tool targets (availability is not proof of live execution): '+Array.from(document.querySelectorAll('input[name="studioTool"]:checked')).map(x=>x.value).join(', ')})});
    let data;try{data=await response.json()}catch{throw new Error('The server returned an unreadable response. Check that the latest Vercel deployment is ready.');}
    if(!response.ok)throw new Error(data.error||'The AI request failed.');
    if(data.scene){
@@ -327,9 +327,9 @@
    const data=await response.json().catch(()=>({error:'Worker returned unreadable data.'}));
    if(!response.ok)throw new Error(data.error||('Simulation request failed (HTTP '+response.status+').'));
    if(data.status!=='completed'||!data.resultsSI)throw new Error('Worker did not confirm a completed simulation.');
-   output.textContent='EXECUTION STATUS: '+data.status+'\\nENGINE: '+data.engine+'\\nMODEL: '+data.model+'\\n\\nINPUTS (SI)\\n'+JSON.stringify(data.inputsSI,null,2)+'\\n\\nRESULTS (SI)\\n'+JSON.stringify(data.resultsSI,null,2)+'\\n\\nEQUATIONS\\n'+JSON.stringify(data.equations,null,2)+'\\n\\nLIMITATIONS\\n• '+(data.limitations||[]).join('\\n• ');
+   output.textContent='EXECUTION STATUS: '+data.status+'\nENGINE: '+data.engine+'\nMODEL: '+data.model+'\n\nINPUTS (SI)\n'+JSON.stringify(data.inputsSI,null,2)+'\n\nRESULTS (SI)\n'+JSON.stringify(data.resultsSI,null,2)+'\n\nEQUATIONS\n'+JSON.stringify(data.equations,null,2)+'\n\nLIMITATIONS\n• '+(data.limitations||[]).join('\n• ');
    status.textContent='Calculation executed by the Render worker. This is analytical beam theory, not FEA; verify assumptions and inputs independently.';
-  }catch(error){output.textContent='No completed simulation result.\\n'+(error.message||'Unknown error');status.textContent='Simulation unavailable: '+(error.message||'check CAD_WORKER_URL, CAD_WORKER_TOKEN and Render logs.');}
+  }catch(error){output.textContent='No completed simulation result.\n'+(error.message||'Unknown error');status.textContent='Simulation unavailable: '+(error.message||'check CAD_WORKER_URL, CAD_WORKER_TOKEN and Render logs.');}
   finally{button.disabled=false;button.textContent='Execute beam analysis ↗';}
  });
 })();
