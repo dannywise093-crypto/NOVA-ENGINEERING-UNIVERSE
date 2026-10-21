@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
   const style = Object.prototype.hasOwnProperty.call(STYLES, requestedStyle) || requestedStyle === "scene" ? requestedStyle : "research";
   if (!PROFILES[discipline]) return res.status(400).json({ error: "Choose a supported engineering studio." });
   const keyVariableByDiscipline = {
-    mechanical: "GROQ_API_KEY_1", civil: "GROQ_API_KEY_1", electrical: "GROQ_API_KEY_1",
+    mechanical: "GROQ_API_KEY_5", civil: "GROQ_API_KEY_1", electrical: "GROQ_API_KEY_1",
     aerospace: "GROQ_API_KEY_2", chemical: "GROQ_API_KEY_2", materials: "GROQ_API_KEY_2",
     robotics: "GROQ_API_KEY_3", automotive: "GROQ_API_KEY_3", energy: "GROQ_API_KEY_3",
     fluids: "GROQ_API_KEY_4", biomedical: "GROQ_API_KEY_4", software: "GROQ_API_KEY_4"
