@@ -623,7 +623,7 @@ window.euGeneratePackageAI = async function (event) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
   try {
-    const response = await fetch("/api/engineer", {
+    const response = await fetch("/api/formula-design", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify({ assistant: "formula-design-ai", discipline: "mechanical", style: "design", task }),
