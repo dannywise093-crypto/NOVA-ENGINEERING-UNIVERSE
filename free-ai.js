@@ -1,4 +1,6 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+import * as THREE from "https://esm.run/three@0.170.0";
+import { OrbitControls } from "https://esm.run/three@0.170.0/examples/jsm/controls/OrbitControls.js";
 
 const $ = id => document.getElementById(id);
 let engine = null;
@@ -10,6 +12,82 @@ const history = [{
 }];
 
 function status(message) { $("status").textContent = message; }
+let previewRenderer = null, previewScene = null, previewCamera = null, previewControls = null, previewResizeObserver = null, previewAnimation = 0;
+function renderScenePreview(sceneData) {
+  const host = $("scenePreview");
+  if (!host) return;
+  if (!previewRenderer) {
+    host.replaceChildren();
+    previewScene = new THREE.Scene();
+    previewScene.background = new THREE.Color("#07111d");
+    previewCamera = new THREE.PerspectiveCamera(42, 1, 0.1, 100000);
+    previewCamera.position.set(180, 150, 220);
+    previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    previewRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    host.appendChild(previewRenderer.domElement);
+    previewControls = new OrbitControls(previewCamera, previewRenderer.domElement);
+    previewControls.enableDamping = true;
+    previewControls.dampingFactor = 0.07;
+    previewScene.add(new THREE.HemisphereLight(0xd9edff, 0x243348, 2.0));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
+    keyLight.position.set(120, 180, 100);
+    previewScene.add(keyLight);
+    const grid = new THREE.GridHelper(500, 25, 0x3a718d, 0x20394e);
+    grid.position.y = -0.01;
+    previewScene.add(grid);
+    previewResizeObserver = new ResizeObserver(() => {
+      const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight);
+      previewRenderer.setSize(w, h, false);
+      previewCamera.aspect = w / h;
+      previewCamera.updateProjectionMatrix();
+    });
+    previewResizeObserver.observe(host);
+    const animate = () => {
+      previewAnimation = requestAnimationFrame(animate);
+      previewControls.update();
+      previewRenderer.render(previewScene, previewCamera);
+    };
+    animate();
+  }
+  const old = previewScene.getObjectByName("generated-parts");
+  if (old) previewScene.remove(old);
+  const group = new THREE.Group();
+  group.name = "generated-parts";
+  for (const item of sceneData.objects) {
+    const d = item.dimensions;
+    const w = d.width, h = d.height, depth = d.depth;
+    let geometry;
+    if (item.type === "box") geometry = new THREE.BoxGeometry(w, h, depth);
+    else if (item.type === "sphere") geometry = new THREE.SphereGeometry(Math.min(w, h, depth) / 2, 24, 16);
+    else if (item.type === "cylinder") geometry = new THREE.CylinderGeometry(Math.min(w, depth) / 2, Math.min(w, depth) / 2, h, 24);
+    else if (item.type === "cone") geometry = new THREE.ConeGeometry(Math.min(w, depth) / 2, h, 24);
+    else geometry = new THREE.TorusGeometry(Math.min(w, h, depth) / 2, Math.max(1, Math.min(w, h, depth) / 8), 12, 28);
+    const material = new THREE.MeshStandardMaterial({ color: item.color || "#49c9f5", metalness: 0.18, roughness: 0.48 });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(...item.position);
+    mesh.rotation.set(...item.rotation.map(n => THREE.MathUtils.degToRad(n)));
+    mesh.name = item.name;
+    group.add(mesh);
+  }
+  previewScene.add(group);
+  const box = new THREE.Box3().setFromObject(group);
+  if (!box.isEmpty()) {
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    group.position.sub(center);
+    const span = Math.max(size.x, size.y, size.z, 20);
+    previewCamera.position.set(span * 1.35, span * 1.0, span * 1.65);
+    previewCamera.near = Math.max(0.1, span / 10000);
+    previewCamera.far = Math.max(10000, span * 100);
+    previewCamera.updateProjectionMatrix();
+    previewControls.target.set(0, 0, 0);
+    previewControls.minDistance = Math.max(5, span * 0.15);
+    previewControls.maxDistance = span * 20;
+    previewControls.update();
+  }
+}
+
 function addMessage(role, message) {
   const p = document.createElement("p");
   p.className = "msg";
@@ -175,6 +253,7 @@ $("generateScene").addEventListener("click", async () => {
   setBusy(true);
   lastScene = null;
   $("sceneOutput").hidden = true;
+  const previewHost = $("scenePreview"); if (previewHost) previewHost.innerHTML = '<div class="preview-empty">Generating a new concept…</div>';
   $("runCascade").disabled = true;
   $("buildStep").disabled = true;
   $("downloadScene").disabled = true;
@@ -192,6 +271,7 @@ $("generateScene").addEventListener("click", async () => {
     const raw = result.choices?.[0]?.message?.content || "";
     lastScene = validateScene(extractJson(raw));
     $("sceneOutput").textContent = JSON.stringify(lastScene, null, 2);
+    renderScenePreview(lastScene);
     $("sceneOutput").hidden = false;
     $("runCascade").disabled = false;
     $("buildStep").disabled = false;
