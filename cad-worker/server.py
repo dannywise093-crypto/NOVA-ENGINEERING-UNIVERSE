@@ -72,14 +72,37 @@ class Handler(BaseHTTPRequestHandler):
         else: self.send_json(404,{"error":"Not found"})
     def do_POST(self):
         path=urlsplit(self.path).path
-        if path not in ("/v1/build-step","/v1/cascade-run"): return self.send_json(404,{"error":"Not found"})
+        if path not in ("/v1/build-step","/v1/cascade-run","/v1/simulate-beam"): return self.send_json(404,{"error":"Not found"})
         if not TOKEN or not secrets.compare_digest(self.headers.get("Authorization",""),"Bearer "+TOKEN): return self.send_json(401,{"error":"Unauthorized"})
         try: length=int(self.headers.get("Content-Length","0"))
         except ValueError: return self.send_json(400,{"error":"Invalid content length"})
         if length<2 or length>256000: return self.send_json(413,{"error":"Request too large or empty"})
         doc=None
         try:
-            payload=json.loads(self.rfile.read(length)); objects=payload.get("scene",{}).get("objects",[])
+            payload=json.loads(self.rfile.read(length))
+            if path=="/v1/simulate-beam":
+                params=payload.get("params",{})
+                if not isinstance(params,dict): raise ValueError("params must be an object.")
+                def bounded(key,low,high):
+                    value=params.get(key)
+                    if isinstance(value,bool) or not isinstance(value,(int,float)): raise ValueError(key+" must be a number.")
+                    value=float(value)
+                    if not (math.isfinite(value) and low<=value<=high): raise ValueError(key+" is outside the supported range.")
+                    return value
+                import math
+                length_m=bounded("lengthM",0.001,10)
+                force_n=bounded("forceN",0,1000000)
+                modulus=bounded("elasticModulusPa",1000000,1000000000000)
+                inertia=bounded("secondMomentOfAreaM4",1e-12,1)
+                section=bounded("sectionModulusM3",1e-12,1)
+                allowable=bounded("allowableStressPa",1,10000000000)
+                deflection=force_n*length_m**3/(3*modulus*inertia)
+                moment=force_n*length_m
+                stress=moment/section
+                fos=(allowable/stress) if stress>0 else None
+                self.send_json(200,{"ok":True,"status":"completed","engine":"Euler-Bernoulli analytical beam model","model":"Prismatic cantilever beam with a point load at its free end; linear-elastic, small-deflection assumptions.","inputsSI":{"lengthM":length_m,"forceN":force_n,"elasticModulusPa":modulus,"secondMomentOfAreaM4":inertia,"sectionModulusM3":section,"allowableStressPa":allowable},"resultsSI":{"tipDeflectionM":deflection,"rootBendingMomentNm":moment,"rootBendingStressPa":stress,"factorOfSafetyAgainstSuppliedAllowable":fos},"equations":{"tipDeflection":"delta = F L^3 / (3 E I)","rootMoment":"M = F L","maximumBendingStress":"sigma = M / Z","factorOfSafety":"FoS = allowable_stress / calculated_stress"},"validation":{"finiteResults":all(math.isfinite(v) for v in [deflection,moment,stress]),"units":"SI"},"limitations":["This is analytical beam theory, not finite-element analysis (FEA).","Assumes a prismatic cantilever, end point load, linear elasticity, and small deflection.","Does not cover fatigue, buckling, stress concentrations, joints, plasticity, or manufacturing defects.","Independent engineering review is required before real-world use."]})
+                return
+            objects=payload.get("scene",{}).get("objects",[])
             if path=="/v1/cascade-run":
                 if not sync_playwright: return self.send_json(503,{"error":"Playwright is not installed. Install Playwright and Chromium on this worker."})
                 if not isinstance(objects,list) or not objects or len(objects)>30: raise ValueError("Provide 1–30 scene objects.")
