@@ -132,19 +132,35 @@ module.exports = async function handler(req, res) {
       return { answer, data, model };
     }
 
+    // Give each provider attempt a bounded time so the UI does not wait forever.
+    // Retry the fallback model on provider errors as well as empty responses.
     let result = await askGroq(primaryModel);
-    if (result.error) {
-      return res.status(502).json({ error: "Groq could not complete the request. Check GROQ_MODEL and confirm the model is available to your Groq account." });
-    }
-    if (!result.answer && primaryModel !== fallbackModel) {
-      console.warn("Retrying empty Groq response with fallback model", fallbackModel);
+    if ((result.error || !result.answer) && primaryModel !== fallbackModel) {
+      console.warn("Primary Groq model failed or returned empty text; retrying fallback model", {
+        primaryModel,
+        status: result.status || null,
+        emptyAnswer: !result.error && !result.answer
+      });
       result = await askGroq(fallbackModel);
     }
     if (result.error) {
-      return res.status(502).json({ error: "Groq could not complete the request with the fallback model. Check your Groq account's model access and deployment logs." });
+      const status = result.status;
+      const providerError = result.data && result.data.error;
+      const providerMessage = providerError && typeof providerError.message === "string" ? providerError.message : "";
+      console.error("Groq fallback failed", JSON.stringify({ status, model: result.model, code: providerError && providerError.code }));
+      if (status === 401 || status === 403) {
+        return res.status(502).json({ error: "Groq rejected the configured API key. Check that GROQ_API_KEY_5 is valid and enabled in Vercel Production." });
+      }
+      if (status === 429) {
+        return res.status(503).json({ error: "Groq rate limit or free-tier quota reached for both models. Wait for the quota to reset, or use another valid Groq key in Vercel Production." });
+      }
+      if (status === 400 && /model|decommission|not found|does not exist/i.test(providerMessage)) {
+        return res.status(502).json({ error: "Groq rejected both configured model choices. Check model availability for your Groq account." });
+      }
+      return res.status(502).json({ error: "Groq could not complete the request with either model. Check the API key, quota, model access, and Vercel runtime logs." });
     }
     const answer = result.answer;
-    if (!answer) return res.status(502).json({ error: "Groq returned no text after retrying with a second model. Check Groq model access and deployment logs." });
+    if (!answer) return res.status(502).json({ error: "Both Groq models returned no text. Try again with a shorter task and check the Groq model access and quota." });
     if (sceneMode) {
       const scene = parseSceneAnswer(answer);
       if (!scene) {
