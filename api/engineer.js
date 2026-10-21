@@ -63,7 +63,8 @@ module.exports = async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
   const discipline = String(body && body.discipline || "");
   const task = String(body && body.task || "").trim();
-  const style = String(body && body.style || "research");
+  const requestedStyle = String(body && body.style || "research");
+  const style = Object.prototype.hasOwnProperty.call(STYLES, requestedStyle) || requestedStyle === "scene" ? requestedStyle : "research";
   if (!PROFILES[discipline]) return res.status(400).json({ error: "Choose a supported engineering studio." });
   if (task.length < 8) return res.status(400).json({ error: "Please provide a more detailed engineering task (at least 8 characters)." });
   if (task.length > 8000) return res.status(413).json({ error: "Task is too long. Keep it under 8,000 characters." });
@@ -72,38 +73,79 @@ module.exports = async function handler(req, res) {
   const system = sceneMode
     ? "You generate basic 3D concept scenes for Engineering Universe. Return ONLY one valid JSON object, with no markdown or prose. The top level must have units set to mm and an objects array. Each object must have name, type (box, cylinder, sphere, cone, or torus), dimensions (width, height, depth), position (three numbers), rotation (three numbers), and color (hex such as #49c9f5). Create 4 to 24 useful separate parts that visually represent the requested object. Use positive dimensions in millimetres, positions in millimetres, and rotations in degrees. Do not use placeholder text, ellipses, comments, or fields outside the schema. This is a visual concept only, not validated CAD."
     : "You are " + role + " in Engineering Universe, a research and concept-design assistant. " + focus + "\\n" +
-      "Be rigorous and honest. Ask for missing design inputs rather than silently assuming them. Clearly label assumptions, units, equations, uncertainty, and verification steps. Distinguish established facts from estimates. For research requests, name credible standards bodies, university sources, peer-reviewed literature, or official technical documentation to check and give URLs only when you know them; never fabricate sources, citations, test results, calculations, or browsing. Do not claim to run CAD, finite-element analysis, CFD, circuit simulation, or external tools unless actually connected. Never describe outputs as certified, code-compliant, safe, or production-ready without proper independent review and validated analysis. Safety-critical construction, aircraft, pressure systems, electrical installations, vehicles, and medical devices require qualified professional review. Respond in clear sections and practical next steps.";
+      "Stay strictly within the selected discipline and its focus above. Do not answer as a generic all-purpose chatbot or drift into unrelated engineering fields. If the task is outside this discipline, say so briefly and redirect the user to the appropriate NOVA assistant. Be rigorous and honest. Ask for missing design inputs rather than silently assuming them. Clearly label assumptions, units, equations, uncertainty, and verification steps. Distinguish established facts from estimates. For research requests, name credible standards bodies, university sources, peer-reviewed literature, or official technical documentation to check and give URLs only when you know them; never fabricate sources, citations, test results, calculations, or browsing. Do not claim to run CAD, finite-element analysis, CFD, circuit simulation, or external tools unless actually connected. Never describe outputs as certified, code-compliant, safe, or production-ready without proper independent review and validated analysis. Safety-critical construction, aircraft, pressure systems, electrical installations, vehicles, and medical devices require qualified professional review. Respond in clear sections and practical next steps.";
   const user = sceneMode
     ? "Create an actual multi-part 3D scene for this request: " + task + "\\nReturn the JSON object only."
     : "Discipline: " + discipline + "\\nRequested output style: " + (STYLES[style] || STYLES.research) + "\\nEngineering task:\\n" + task;
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
-        temperature: 0.2,
-        max_tokens: sceneMode ? 1800 : 3200,
-        messages: [{ role: "system", content: system }, { role: "user", content: user }]
-      })
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Groq API error", response.status);
-      return res.status(502).json({ error: "The AI provider request failed. Check the configured Groq model and account access." });
+    const endpoint = "https://api.groq.com/openai/v1/chat/completions";
+    const primaryModel = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
+    const fallbackModel = "llama-3.3-70b-versatile";
+    async function askGroq(model) {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          temperature: 0.2,
+          max_tokens: sceneMode ? 1800 : 3200,
+          messages: [{ role: "system", content: system }, { role: "user", content: user }]
+        })
+      });
+      let data;
+      try { data = await response.json(); } catch { data = null; }
+      if (!response.ok) {
+        const providerError = data && data.error;
+        console.error("Groq API error", JSON.stringify({
+          status: response.status,
+          model,
+          code: providerError && providerError.code,
+          type: providerError && providerError.type,
+          message: providerError && providerError.message
+        }));
+        return { error: true, status: response.status, data };
+      }
+      const message = data && data.choices && data.choices[0] && data.choices[0].message;
+      let answer = message && message.content;
+      if (Array.isArray(answer)) {
+        answer = answer.map(part => typeof part === "string" ? part : (part && (part.text || part.content) || "")).join("");
+      }
+      if (typeof answer !== "string") answer = "";
+      answer = answer.trim();
+      if (!answer) {
+        console.error("Groq returned no text", JSON.stringify({
+          model,
+          finish_reason: data && data.choices && data.choices[0] && data.choices[0].finish_reason,
+          message_keys: message && typeof message === "object" ? Object.keys(message) : [],
+          has_refusal: Boolean(message && message.refusal)
+        }));
+      }
+      return { answer, data, model };
     }
-    const answer = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-    if (!answer) return res.status(502).json({ error: "The AI provider returned an empty response." });
+
+    let result = await askGroq(primaryModel);
+    if (result.error) {
+      return res.status(502).json({ error: "Groq could not complete the request. Check GROQ_MODEL and confirm the model is available to your Groq account." });
+    }
+    if (!result.answer && primaryModel !== fallbackModel) {
+      console.warn("Retrying empty Groq response with fallback model", fallbackModel);
+      result = await askGroq(fallbackModel);
+    }
+    if (result.error) {
+      return res.status(502).json({ error: "Groq could not complete the request with the fallback model. Check your Groq account's model access and deployment logs." });
+    }
+    const answer = result.answer;
+    if (!answer) return res.status(502).json({ error: "Groq returned no text after retrying with a second model. Check Groq model access and deployment logs." });
     if (sceneMode) {
       const scene = parseSceneAnswer(answer);
       if (!scene) {
         console.error("Groq scene response was not valid scene JSON");
-        return res.status(502).json({ error: "The AI returned an invalid 3D scene. Try a shorter description, such as a small car with four wheels." });
+        return res.status(502).json({ error: "Groq returned an invalid 3D scene. Try a shorter description, such as a small car with four wheels." });
       }
-      return res.status(200).json({ role, discipline, answer, scene });
+      return res.status(200).json({ role, discipline, answer, scene, model: result.model });
     }
     const scene = style === "design" ? parseSceneAnswer(answer) : null;
-    return res.status(200).json({ role, discipline, answer, ...(scene ? { scene } : {}) });
+    return res.status(200).json({ role, discipline, answer, ...(scene ? { scene } : {}), model: result.model });
   } catch (error) {
     console.error("AI endpoint request failed", error && error.message);
     return res.status(502).json({ error: "Could not connect to the AI provider. Try again later." });
