@@ -5,13 +5,6 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Use POST." });
   }
 
-  const key = process.env.POLLINATIONS_API_KEY;
-  if (!key) {
-    return res.status(503).json({
-      error: "AI image generation is not connected yet. Add POLLINATIONS_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy."
-    });
-  }
-
   let body = req.body;
   if (typeof body === "string") {
     try { body = JSON.parse(body); } catch { body = {}; }
@@ -27,37 +20,54 @@ module.exports = async function handler(req, res) {
 
   const width = [768, 1024].includes(Number(body && body.width)) ? Number(body.width) : 1024;
   const height = [768, 1024].includes(Number(body && body.height)) ? Number(body.height) : 1024;
-  const url = "https://gen.pollinations.ai/image/" + encodeURIComponent(prompt) +
-    "?model=black-forest-labs%2Fflux.1-schnell&width=" + width +
-    "&height=" + height + "&safe=true&private=true";
-
+  const key = process.env.POLLINATIONS_API_KEY;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55000);
 
   try {
-    const upstream = await fetch(url, {
-      method: "GET",
-      headers: { "Authorization": "Bearer " + key, "Accept": "image/*" },
-      signal: controller.signal
-    });
+    // Prefer the authenticated current API when configured. If no key is set,
+    // try Pollinations' legacy Free API Classic instead of failing immediately.
+    const providers = key
+      ? [{
+          url: "https://gen.pollinations.ai/image/" + encodeURIComponent(prompt) +
+            "?model=black-forest-labs%2Fflux.1-schnell&width=" + width +
+            "&height=" + height + "&safe=true&private=true",
+          headers: { "Authorization": "Bearer " + key, "Accept": "image/*" }
+        }]
+      : [{
+          url: "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) +
+            "?width=" + width + "&height=" + height + "&nologo=true&safe=true",
+          headers: { "Accept": "image/*" }
+        }];
 
-    const type = upstream.headers.get("content-type") || "";
-    if (!upstream.ok || !type.startsWith("image/")) {
-      let details = "";
-      try { details = (await upstream.text()).slice(0, 500); } catch {}
-      console.error("Pollinations image request failed:", upstream.status, details);
-      return res.status(502).json({
-        error: upstream.status === 401 || upstream.status === 403
-          ? "The image provider rejected POLLINATIONS_API_KEY. Check the key in Vercel."
-          : "The image provider could not generate this image. Check the provider key/credits and try again."
+    let lastStatus = 0;
+    for (const provider of providers) {
+      const upstream = await fetch(provider.url, {
+        method: "GET",
+        headers: provider.headers,
+        signal: controller.signal
       });
+      const type = upstream.headers.get("content-type") || "";
+      if (upstream.ok && type.startsWith("image/")) {
+        const bytes = Buffer.from(await upstream.arrayBuffer());
+        res.setHeader("Content-Type", type);
+        res.setHeader("Content-Length", String(bytes.length));
+        res.setHeader("Cache-Control", "no-store");
+        return res.status(200).send(bytes);
+      }
+
+      lastStatus = upstream.status;
+      let details = "";
+      try { details = (await upstream.text()).slice(0, 300); } catch {}
+      console.error("Pollinations image request failed:", upstream.status, details);
     }
 
-    const bytes = Buffer.from(await upstream.arrayBuffer());
-    res.setHeader("Content-Type", type);
-    res.setHeader("Content-Length", String(bytes.length));
-    res.setHeader("Cache-Control", "no-store");
-    return res.status(200).send(bytes);
+    return res.status(502).json({
+      error: key
+        ? "The image provider could not generate this image. Check the Pollinations key/account or try again."
+        : "The free image provider is temporarily unavailable. The page will show a local schematic instead; no API key was configured.",
+      provider_status: lastStatus || undefined
+    });
   } catch (error) {
     console.error("Image generation request failed:", error && error.message);
     return res.status(502).json({
