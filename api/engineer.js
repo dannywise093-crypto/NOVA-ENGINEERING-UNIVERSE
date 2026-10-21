@@ -1,3 +1,5 @@
+const { researchEngineering } = require("./_engineering-research");
+
 const PROFILES = {
   mechanical: ["Mechanical CAD AI Assistant", "Focus on mechanical design, CAD feature planning, mechanisms, materials, tolerances, manufacturability, and explicit equations."],
   civil: ["Civil & Structural AI Assistant", "Focus on structural concepts, load paths, boundary conditions, geotechnical uncertainty, applicable-code research, and conservative verification. Never certify safety."],
@@ -77,6 +79,8 @@ module.exports = async function handler(req, res) {
   if (task.length < 8) return res.status(400).json({ error: "Please provide a more detailed engineering task (at least 8 characters)." });
   if (task.length > 8000) return res.status(413).json({ error: "Task is too long. Keep it under 8,000 characters." });
   const [role, focus] = PROFILES[discipline];
+  // Search public scholarly indexes before generating an answer. Scene-only output remains strict JSON.
+  const research = style === "scene" ? null : await researchEngineering(task, discipline);
   const sceneMode = style === "scene";
   const system = sceneMode
     ? "You generate basic 3D concept scenes for Engineering Universe. Return ONLY one valid JSON object, with no markdown or prose. The top level must have units set to mm and an objects array. Each object must have name, type (box, cylinder, sphere, cone, or torus), dimensions (width, height, depth), position (three numbers), rotation (three numbers), and color (hex such as #49c9f5). Create 4 to 24 useful separate parts that visually represent the requested object. Use positive dimensions in millimetres, positions in millimetres, and rotations in degrees. Do not use placeholder text, ellipses, comments, or fields outside the schema. This is a visual concept only, not validated CAD."
@@ -85,7 +89,8 @@ module.exports = async function handler(req, res) {
       "Stay strictly within the selected discipline and its focus above. Do not answer as a generic all-purpose chatbot or drift into unrelated engineering fields. If the task is outside this discipline, say so briefly and redirect the user to the appropriate NOVA assistant. Be rigorous and honest. Ask for missing design inputs rather than silently assuming them. Clearly label assumptions, units, equations, uncertainty, and verification steps. Distinguish established facts from estimates. For research requests, name credible standards bodies, university sources, peer-reviewed literature, or official technical documentation to check and give URLs only when you know them; never fabricate sources, citations, test results, calculations, or browsing. Do not claim to run CAD, finite-element analysis, CFD, circuit simulation, or external tools unless actually connected. Never describe outputs as certified, code-compliant, safe, or production-ready without proper independent review and validated analysis. Safety-critical construction, aircraft, pressure systems, electrical installations, vehicles, and medical devices require qualified professional review. Respond in clear sections and practical next steps.";
   const user = sceneMode
     ? "Create an actual multi-part 3D scene for this request: " + task + "\\nReturn the JSON object only."
-    : "Discipline: " + discipline + "\\nRequested output style: " + (STYLES[style] || STYLES.research) + "\\nEngineering task:\\n" + task;
+    : "Discipline: " + discipline + "\\nRequested output style: " + (STYLES[style] || STYLES.research) + "\\nEngineering task:\\n" + task +
+      (research ? "\\n\\nLIVE PUBLIC RESEARCH SEARCH (retrieved for this request):\\n" + (research.sources.length ? research.sources.map((s, i) => (i + 1) + ". " + s.title + (s.year ? " (" + s.year + ")" : "") + " — " + s.url + (s.venue ? " — " + s.venue : "")).join("\\n") : "No usable records were returned from Crossref/OpenAlex for this query.") + "\\nResearch status: " + research.status + ". " + research.note + "\\nUse only relevant records, distinguish metadata from full-text verification, do not imply these sources prove a design works, and explicitly state when the evidence is insufficient. Never claim you physically tested a material or ran a simulation." : "");
   try {
     const endpoint = "https://api.groq.com/openai/v1/chat/completions";
     const primaryModel = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
@@ -170,7 +175,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ role, discipline, answer, scene, model: result.model });
     }
     const scene = style === "design" ? parseSceneAnswer(answer) : null;
-    return res.status(200).json({ role, discipline, answer, ...(scene ? { scene } : {}), model: result.model });
+    return res.status(200).json({ role, discipline, answer, ...(scene ? { scene } : {}), ...(research ? { research } : {}), model: result.model });
   } catch (error) {
     console.error("AI endpoint request failed", error && error.message);
     return res.status(502).json({ error: "Could not connect to the AI provider. Try again later." });

@@ -1,3 +1,5 @@
+const { researchEngineering } = require("./_engineering-research");
+
 const MODES = {
   formula: "Explain the relevant engineering formula. Write it symbolically, define every variable and SI unit, explain when it applies, state assumptions and limits, and include a short example when useful.",
   calculate: "Solve the engineering calculation step by step. List knowns and unknowns, convert units, choose the governing equation, show substitutions and arithmetic, check dimensions and reasonableness, and state uncertainty. If essential inputs are missing, ask for them instead of inventing values.",
@@ -17,8 +19,10 @@ module.exports = async function handler(req,res) {
   if(task.length>8000)return res.status(413).json({error:"Keep the task under 8,000 characters."});
   const key=process.env.GROQ_API_KEY_5||process.env.GROQ_API_KEY;
   if(!key)return res.status(503).json({error:"GROQ_API_KEY_5 is missing from Vercel Production. Add the key in Project Settings → Environment Variables, then redeploy."});
-  const system="You are Engineering Formula & Design AI, a specialized engineering assistant in NOVA Engineering Universe. Your purpose is to explain engineering formulas, solve well-specified calculations, create preliminary design concepts, and review engineering assumptions. Be rigorous, practical, and transparent. Define variables and units, show calculations clearly, and distinguish known values from assumptions or illustrative placeholders. Do not invent inputs, test results, sources, citations, code compliance, simulations, or material properties. If essential information is missing, state exactly what is needed. Do not claim to run external CAD or simulation tools unless connected. This is not a certified engineering service; safety-critical work requires independent analysis and qualified professional review. Respond with clear headings and readable equations.";
-  const user="Task type: "+mode+"\nRequested method: "+MODES[mode]+"\n\nUser's engineering task:\n"+task;
+  const research = await researchEngineering(task, "general engineering");
+  const sourceContext = research.sources.length ? research.sources.map((s,i)=>(i+1)+". "+s.title+(s.year?" ("+s.year+")":"")+" — "+s.url+(s.venue?" — "+s.venue:"")).join("\n") : "No usable scholarly records were returned by the available public indexes for this query.";
+  const system="You are Engineering Formula & Design AI, a specialized engineering assistant in NOVA Engineering Universe. Your purpose is to explain engineering formulas, solve well-specified calculations, create preliminary design concepts, and review engineering assumptions. Be rigorous, practical, and transparent. Define variables and units, show calculations clearly, and distinguish known values from assumptions or illustrative placeholders. Use supplied live research results as leads, not proof: do not claim a source was read in full unless full text was retrieved, and never invent inputs, test results, sources, citations, code compliance, simulations, or material properties. If evidence is insufficient or no useful material is found, say so plainly and suggest what evidence or tests are needed. You cannot physically test materials or operate external CAD/simulation tools unless a real integration performs that operation and returns results. Do not pretend otherwise. This is not a certified engineering service; safety-critical work requires independent analysis and qualified professional review. Respond with clear headings and readable equations.";
+  const user="Task type: "+mode+"\nRequested method: "+MODES[mode]+"\n\nUser's engineering task:\n"+task+"\n\nLIVE PUBLIC RESEARCH SEARCH (retrieved for this request):\n"+sourceContext+"\nResearch status: "+research.status+". "+research.note+"\nCompare candidate materials only when relevant and cite the supplied URLs. Clearly separate published data, estimates, and untested hypotheses. If no candidate can be supported, say that no verified option was found rather than guessing.";
   const models=[process.env.GROQ_MODEL||"openai/gpt-oss-20b","llama-3.3-70b-versatile"].filter((m,i,a)=>a.indexOf(m)===i);
   try{
     let lastStatus=502,lastProviderMessage="";
@@ -33,7 +37,7 @@ module.exports = async function handler(req,res) {
         const message=data&&data.choices&&data.choices[0]&&data.choices[0].message;
         let answer=message&&message.content;
         if(Array.isArray(answer))answer=answer.map(p=>typeof p==="string"?p:(p&&(p.text||p.content)||"")).join("");
-        if(typeof answer==="string"&&answer.trim())return res.status(200).json({ok:true,assistant:"formula-design-ai",mode,answer:answer.trim(),model});
+        if(typeof answer==="string"&&answer.trim())return res.status(200).json({ok:true,assistant:"formula-design-ai",mode,answer:answer.trim(),research,model});
         lastProviderMessage="The model returned an empty answer.";
       }else{
         lastStatus=response?response.status:502;
