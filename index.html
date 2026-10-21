@@ -220,8 +220,8 @@ try{
  const axes=new THREE.AxesHelper(70);scene.add(axes);
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.075;
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.ShadowMaterial({opacity:.12}));floor.rotation.x=-Math.PI/2;floor.position.y=-.8;scene.add(floor);
-}catch(e){$('ucViewStatus').textContent='3D ENGINE FAILED TO INITIALIZE';console.error(e);return}
-function resize(){const r=view.getBoundingClientRect();if(!r.width||!r.height)return;renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
+}catch(e){$('ucViewStatus').textContent='3D VIEWPORT UNAVAILABLE — controls remain active';console.error('3D renderer initialization failed; keeping scene controls available:',e);if(!scene)scene=new THREE.Scene();if(!camera)camera=new THREE.PerspectiveCamera(48,1,.1,10000);controls=controls||{target:new THREE.Vector3(),update(){}};}
+function resize(){if(!renderer||!camera)return;const r=view.getBoundingClientRect();if(!r.width||!r.height)return;renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(view);window.addEventListener('resize',resize);resize();
 function add(type,position=[0,0,0],color='#49c9f5',dims={width:30,height:30,depth:30},name){
  let geo;if(type==='sphere')geo=new THREE.SphereGeometry(Math.max(.5,Math.min(dims.width,dims.height,dims.depth)/2),32,24);else if(type==='cylinder')geo=new THREE.CylinderGeometry(Math.max(.5,dims.width/2),Math.max(.5,dims.width/2),Math.max(.5,dims.height),32);else if(type==='cone')geo=new THREE.ConeGeometry(Math.max(.5,dims.width/2),Math.max(.5,dims.height),32);else if(type==='torus')geo=new THREE.TorusGeometry(Math.max(1,dims.width/2),Math.max(.5,dims.height/4),12,40);else geo=new THREE.BoxGeometry(Math.max(.5,dims.width),Math.max(.5,dims.height),Math.max(.5,dims.depth));
@@ -255,7 +255,7 @@ $('ucTimeline').oninput=e=>{frame=Number(e.target.value);$('ucFrame').textConten
 $('ucPlay').onclick=()=>{playing=!playing;if(playing){playStart=performance.now();playFrame=frame;$('ucPlay').textContent='Ⅱ Pause'}else $('ucPlay').textContent='▶ Play'};
 canvas.addEventListener('pointerdown',e=>{const rect=canvas.getBoundingClientRect(),mouse=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(objects,false);if(hits[0])select(hits[0].object)});
 restore();if(!objects.length)add('box',[0,15,0],'#49c9f5',{width:30,height:30,depth:30},'Cube');
-function animate(now){raf=requestAnimationFrame(animate);if(playing){frame=((Math.floor((now-playStart)/1000*24)+playFrame-1)%120)+1;$('ucTimeline').value=frame;$('ucFrame').textContent=String(frame).padStart(3,'0');objects.forEach((o,i)=>{if(o.userData.eu.animate)o.rotation.y+=.01})}controls.update();renderer.render(scene,camera)}
+function animate(now){raf=requestAnimationFrame(animate);if(playing){frame=((Math.floor((now-playStart)/1000*24)+playFrame-1)%120)+1;$('ucTimeline').value=frame;$('ucFrame').textContent=String(frame).padStart(3,'0');objects.forEach((o,i)=>{if(o.userData.eu.animate)o.rotation.y+=.01})}controls?.update?.();if(renderer&&scene&&camera)renderer.render(scene,camera)}
 raf=requestAnimationFrame(animate);
 })();
 </script>
