@@ -1,0 +1,33 @@
+name: CAD Worker Regression Tests
+
+on:
+  pull_request:
+    paths:
+      - "cad-worker/**"
+      - "api/cad-simulation.js"
+      - ".github/workflows/cad-worker-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "cad-worker/**"
+      - "api/cad-simulation.js"
+      - ".github/workflows/cad-worker-tests.yml"
+
+jobs:
+  beam-simulation-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile worker and tests
+        run: python -m py_compile server.py test_server.py
+        working-directory: cad-worker
+      - name: Run beam simulation regression tests
+        run: python -m unittest -v test_server.py
+        working-directory: cad-worker
+      - name: Check Vercel API syntax
+        run: node --check api/cad-simulation.js
