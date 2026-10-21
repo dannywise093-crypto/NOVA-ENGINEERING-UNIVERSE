@@ -272,6 +272,7 @@ $("send").addEventListener("click", async () => {
         answer = await freeTextFallback("You are NOVA, an engineering and coding assistant. Be accurate, state assumptions and units, and warn that concepts are not safety-validated. User question: " + prompt);
         status("Reply received from the free public text fallback. Availability and limits depend on that service.");
       }
+    }
     addMessage("assistant", answer);
   } catch (error) {
     const message = error && error.message || String(error);
