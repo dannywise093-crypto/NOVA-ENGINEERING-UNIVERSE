@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
     robotics: "GROQ_API_KEY_3", automotive: "GROQ_API_KEY_3", energy: "GROQ_API_KEY_3",
     fluids: "GROQ_API_KEY_4", biomedical: "GROQ_API_KEY_4", software: "GROQ_API_KEY_4"
   };
-  const keyVariable = keyVariableByDiscipline[discipline];
+  const keyVariable = body && body.assistant === "formula-design-ai" ? "GROQ_API_KEY_5" : keyVariableByDiscipline[discipline];
   // Use the discipline-specific key when configured; retain the old key as a safe migration fallback.
   const key = process.env[keyVariable] || process.env.GROQ_API_KEY;
   if (!key) return res.status(503).json({ error: keyVariable + " is not configured in Vercel Production. Add this variable for the selected engineering assistant (or configure GROQ_API_KEY as a shared fallback)." });

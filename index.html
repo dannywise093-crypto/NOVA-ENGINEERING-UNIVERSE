@@ -538,7 +538,7 @@ const imageButton=byId("euGenerateImage");
  if(packageButton)packageButton.addEventListener("click",async()=>{
   const task=value("euDesignTask");if(task.length<8){status("euPackageStatus","Describe the design in more detail.");return}
   packageButton.disabled=true;packageButton.textContent="Working…";status("euPackageStatus","Generating formulas, dimensions, design notes and starter CAD code…");
-  try{const res=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({discipline:"mechanical",style:"design",task})});let d={};try{d=await res.json()}catch{}if(!res.ok)throw new Error(d.error||"Engineering AI request failed.");byId("euPackageOutput").textContent=d.answer||"The AI returned no design text.";status("euPackageStatus","Design package ready. Review assumptions and verification steps before use.")}
+  try{const res=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({assistant:"formula-design-ai",discipline:"mechanical",style:"design",task})});let d={};try{d=await res.json()}catch{}if(!res.ok)throw new Error(d.error||"Engineering AI request failed.");byId("euPackageOutput").textContent=d.answer||"The AI returned no design text.";status("euPackageStatus","Design package ready. Review assumptions and verification steps before use.")}
   catch(e){status("euPackageStatus",e.message||"Could not reach engineering AI. Check GROQ_API_KEY and deployment logs.")}
   finally{packageButton.disabled=false;packageButton.textContent="Generate Design Package ↗"}
  });
