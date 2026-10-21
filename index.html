@@ -442,6 +442,7 @@ window.addEventListener('eu3d-ready',()=>{});
 window.EU3D.update('box',{width:80,height:40,depth:60},25);
 </script>
 <script>
+try {
 (function(){
 const $=id=>document.getElementById(id);
 const out=$('euTerminalOutput'),input=$('euTerminalInput'),fallback=$('euEditorFallback'),lang=$('euEditorLanguage');
@@ -500,6 +501,11 @@ $('euEditorCopy').addEventListener('click',async()=>{try{await navigator.clipboa
 $('euEditorDownload').addEventListener('click',()=>{const ext={openscad:'scad',python:'py',javascript:'js',json:'json'}[lang.value]||'txt';const blob=new Blob([getCode()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='engineering-universe-design.'+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);log('Downloaded engineering-universe-design.'+ext)});
 $('euEditorLoad').addEventListener('click',()=>{if(!lastGeneratedCode){log('No AI-generated code yet. Run: ai design <your task>');return}setCode(lastGeneratedCode);log('Last generated code loaded into editor.')});
 })();
+} catch (error) {
+ console.error('NOVA engineering terminal initialization failed; keeping design tools available:', error);
+ const terminalState = document.getElementById('euTerminalState');
+ if (terminalState) terminalState.textContent = '● TERMINAL UNAVAILABLE — DESIGN TOOLS REMAIN AVAILABLE';
+}
 
 /* Engineering image, package, and drawing tools */
 (function(){
