@@ -127,7 +127,7 @@ body{background:#090d14;color:#edf3fb}
  <div class="uc-main">
   <aside class="uc-side"><div class="uc-pane-title">CREATE OBJECT</div><button class="uc-tool" data-uc-add="box">▣ &nbsp; Cube</button><button class="uc-tool" data-uc-add="sphere">◉ &nbsp; Sphere</button><button class="uc-tool" data-uc-add="cylinder">▤ &nbsp; Cylinder</button><button class="uc-tool" data-uc-add="cone">△ &nbsp; Cone</button><button class="uc-tool" data-uc-add="torus">◉ &nbsp; Ring / Torus</button><div class="uc-divider"></div><div class="uc-pane-title">TRANSFORM</div><div class="uc-field"><label>Position X</label><input id="ucX" type="number" value="0"></div><div class="uc-field"><label>Position Y</label><input id="ucY" type="number" value="0"></div><div class="uc-field"><label>Position Z</label><input id="ucZ" type="number" value="0"></div><div class="uc-field"><label>Scale</label><input id="ucScale" type="number" min=".1" max="10" step=".1" value="1"></div><div class="uc-field"><label>Material color</label><input id="ucColor" type="color" value="#49c9f5"></div><button class="uc-mini wide" id="ucApplyTransform">Apply Transform</button><p class="uc-hint">Coordinates use millimetre-like scene units. This is a concept workspace, not a full replacement for Blender or Unreal Engine.</p></aside>
   <div class="uc-viewport-wrap"><div class="uc-viewbar"><span>▣ PERSPECTIVE</span><span>GRID · LIGHTING · REAL-TIME VIEW</span><button id="ucResetView">Reset View</button></div><div id="ucViewport"><canvas id="ucCanvas" aria-label="Universe Creator 3D viewport"></canvas><div class="uc-crosshair">+ <small>WORLD ORIGIN</small></div><div class="uc-view-status" id="ucViewStatus">INITIALIZING 3D ENGINE…</div></div><div class="uc-timeline"><div class="uc-timeline-head"><b>SEQUENCER / TIMELINE</b><span>FRAME <strong id="ucFrame">001</strong> / 120</span><button id="ucPlay">▶ Play</button></div><input id="ucTimeline" type="range" min="1" max="120" value="1"><div class="uc-ticks"><span>1</span><span>24</span><span>48</span><span>72</span><span>96</span><span>120</span></div></div></div>
-  <aside class="uc-side uc-right"><div class="uc-pane-title">OUTLINER / SCENE</div><div id="ucHierarchy" class="uc-hierarchy"></div><div class="uc-divider"></div><div class="uc-pane-title">ENGINEERING FORMULA AND DESIGN AI</div><textarea id="ucPrompt" placeholder="Describe the engineering formula, 3D design, machine, part, or structure you want the AI to create…"></textarea><button class="btn primary wide" id="ucGenerate">Engineering Formula and Design AI ↗</button><div class="uc-divider"></div><div class="uc-pane-title">SCENE DATA</div><button class="uc-mini wide" id="ucLoadJson">Load editor JSON into scene</button><button class="uc-mini wide" id="ucLoadLastAI">Load last AI-generated model</button><button class="uc-mini wide" id="ucExportJson">Export Scene JSON</button><p class="uc-hint">AI scene results and primitive objects are editable. Advanced sculpting, node materials, physics simulation and animation rigging are future modules.</p></aside>
+  <aside class="uc-side uc-right"><div class="uc-pane-title">OUTLINER / SCENE</div><div id="ucHierarchy" class="uc-hierarchy"></div><div class="uc-divider"></div><div class="uc-pane-title">SCENE DATA</div><button class="uc-mini wide" id="ucLoadJson">Load editor JSON into scene</button><button class="uc-mini wide" id="ucLoadLastAI">Load last AI-generated model</button><button class="uc-mini wide" id="ucExportJson">Export Scene JSON</button><p class="uc-hint">AI scene results and primitive objects are editable. Advanced sculpting, node materials, physics simulation and animation rigging are future modules.</p></aside>
  </div>
  <div class="uc-bottom"><span id="ucSelection">Selected: Cube</span><span>REAL-TIME VIEWPORT</span><span id="ucObjectCount">Objects: 1</span><span id="ucSaveStatus">Unsaved scene</span></div>
 </div></div></section>
@@ -250,7 +250,6 @@ function applyEditorSceneJson(txt){const parsed=JSON.parse(txt);loadSpec(parsed)
 $('ucLoadJson').onclick=()=>{const editor=document.getElementById('euCodeEditor');const fb=document.getElementById('euEditorFallback');const txt=window.monaco?.editor?.getModels?.()[0]?.getValue?.()||fb?.value||'';try{if(!txt.trim())throw Error('The code editor is empty. Choose a scene JSON file to load.');applyEditorSceneJson(txt)}catch(e){if(txt.trim()){alert('Editor content is not valid scene JSON. Select a .json scene file instead. Details: '+e.message);return}const picker=document.createElement('input');picker.type='file';picker.accept='.json,application/json';picker.onchange=async()=>{const file=picker.files?.[0];if(!file)return;try{applyEditorSceneJson(await file.text())}catch(err){alert('Could not load scene JSON: '+err.message)}};picker.click()}};
 $('ucLoadLastAI').onclick=()=>{try{const raw=localStorage.getItem('eu-creator-last-ai-scene');if(!raw){$('ucViewStatus').textContent='No saved AI-generated model yet. Generate a model first.';alert('No AI-generated model is saved yet. Use Engineering Formula and Design AI first.');return}loadSpec(JSON.parse(raw));$('ucSaveStatus').textContent='Last AI-generated model restored';$('ucViewStatus').textContent='LAST AI MODEL LOADED · '+objects.length+' OBJECTS';$('worldStudio').scrollIntoView({behavior:'smooth'})}catch(e){$('ucViewStatus').textContent='Could not load last AI model';alert('Could not load the last AI-generated model: '+e.message)}};
 function parseSceneFromAnswer(answer){const candidates=[];const re=/```(?:eu-scene|json)?\s*([\s\S]*?)```/gi;let m;while((m=re.exec(answer))!==null)candidates.push(m[1].trim());const first=answer.indexOf('{"objects"');if(first>=0){const last=answer.lastIndexOf('}');if(last>first)candidates.push(answer.slice(first,last+1))}for(const raw of candidates){try{const value=JSON.parse(raw);if(Array.isArray(value))return value;if(value&&Array.isArray(value.objects))return value}catch(e){}}return null}
-$('ucGenerate').onclick=async()=>{const task=$('ucPrompt').value.trim();if(task.length<8){$('ucViewStatus').textContent='Please describe what you want to create in at least a few words.';return}const b=$('ucGenerate');b.disabled=true;b.textContent='Engineering design AI working…';$('ucViewStatus').textContent='AI IS DESIGNING THE 3D SCENE…';try{const res=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({assistant:'formula-design-ai',discipline:'mechanical',style:'scene',task})});let data;try{data=await res.json()}catch(e){throw Error('The AI endpoint returned an unreadable response. Check the latest Vercel deployment.')}if(!res.ok)throw Error(data.error||('AI request failed (HTTP '+res.status+').'));const sceneData=data.scene||parseSceneFromAnswer(String(data.answer||''));if(!sceneData)throw Error('The AI did not return a valid 3D scene. Try a simpler description.');loadSpec(sceneData);localStorage.setItem('eu-creator-last-ai-scene',JSON.stringify(sceneData));$('ucSaveStatus').textContent='AI scene loaded — tap Save to keep it';$('ucViewStatus').textContent='AI CONCEPT GENERATED · '+objects.length+' OBJECTS';$('worldStudio').scrollIntoView({behavior:'smooth'})}catch(e){$('ucViewStatus').textContent='AI ERROR · '+e.message;alert('Engineering Formula and Design AI: '+e.message)}finally{b.disabled=false;b.textContent='Engineering Formula and Design AI ↗'}};
 $('ucTimeline').oninput=e=>{frame=Number(e.target.value);$('ucFrame').textContent=String(frame).padStart(3,'0');$('ucSaveStatus').textContent='Timeline frame '+frame};
 $('ucPlay').onclick=()=>{playing=!playing;if(playing){playStart=performance.now();playFrame=frame;$('ucPlay').textContent='Ⅱ Pause'}else $('ucPlay').textContent='▶ Play'};
 canvas.addEventListener('pointerdown',e=>{const rect=canvas.getBoundingClientRect(),mouse=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(objects,false);if(hits[0])select(hits[0].object)});
@@ -319,11 +318,6 @@ This is a restricted engineering command console, not an Android/Linux shell.</d
    <div class="actions"><button class="btn primary" id="euGenerateImage">Generate Image ↗</button></div><div class="id-status" id="euImageStatus">Trying the free image provider first; if unavailable, a local schematic will be generated.</div>
   </div>
   <div class="id-panel"><div class="badge">GENERATED IMAGE</div><h3>Image preview</h3><div class="id-preview" id="euImagePreview"><span class="note">Your generated image will appear here.</span></div><a class="btn id-download" id="euImageDownload" download="engineering-concept.png">Download image ↓</a></div>
-  <div class="id-panel"><div class="badge">FORMULAS + DIMENSIONS + 3D</div><h3>Engineering design package</h3>
-   <label for="euDesignTask">What should the AI design?</label><textarea id="euDesignTask" placeholder="Example: design a small belt-driven gearbox. Explain the design, list dimensions and materials, show equations and assumptions, and create a simple 3D concept."></textarea>
-   <div class="actions"><button class="btn primary" id="euGeneratePackage" type="button" onclick="return window.euGeneratePackageAI(event)">Generate Design Package ↗</button><button class="btn" id="euGenerate3D">Generate 3D Model</button></div>
-   <div class="id-status" id="euPackageStatus">Uses the existing Groq-backed engineering endpoint.</div><div class="id-output" id="euPackageOutput">Your formulas, parameter table, design notes, and starter CAD code will appear here.</div>
-  </div>
   <div class="id-panel"><div class="badge">TECHNICAL DRAWING</div><h3>Generate a dimensioned 3-view drawing</h3><p class="note">Creates an editable/downloadable SVG drawing for a simple rectangular part from your dimensions.</p>
    <div class="id-row"><div><label for="euDimW">Width (mm)</label><input id="euDimW" type="number" min="1" max="2000" value="100"></div><div><label for="euDimH">Height (mm)</label><input id="euDimH" type="number" min="1" max="2000" value="60"></div><div><label for="euDimD">Depth (mm)</label><input id="euDimD" type="number" min="1" max="2000" value="40"></div></div>
    <div class="actions"><button class="btn primary" id="euDrawTechnical">Create Drawing</button><a class="btn id-download" id="euDrawingDownload" download="engineering-technical-drawing.svg">Download SVG ↓</a></div><div class="id-preview" id="euDrawingPreview"><span class="note">Your drawing will appear here.</span></div>
@@ -595,60 +589,6 @@ const imageButton=byId("euGenerateImage");
 })();
 </script>
 
-<script>
-/* Formula & Design AI direct click handler. The button calls this function from its markup. */
-window.euGeneratePackageAI = async function (event) {
-  if (event) { event.preventDefault(); event.stopPropagation(); }
-  const button = document.getElementById("euGeneratePackage");
-  const input = document.getElementById("euDesignTask");
-  const status = document.getElementById("euPackageStatus");
-  const output = document.getElementById("euPackageOutput");
-  if (!button || !input || !status || !output) {
-    alert("Engineering Formula & Design AI could not initialize: a required page element is missing.");
-    return false;
-  }
-  if (button.dataset.busy === "true") return false;
-  const task = input.value.trim();
-  if (task.length < 8) {
-    status.textContent = "Please describe the design in at least 8 characters.";
-    output.textContent = "Example: Design a small gearbox and explain its formulas, dimensions, materials, and assumptions.";
-    input.focus();
-    return false;
-  }
-  button.dataset.busy = "true";
-  button.disabled = true;
-  button.textContent = "Generating design…";
-  status.textContent = "Button works. Connecting to Engineering Formula & Design AI…";
-  output.textContent = "Waiting for the AI response…";
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
-  try {
-    const response = await fetch("/api/formula-design", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ assistant: "formula-design-ai", discipline: "mechanical", style: "design", task }),
-      signal: controller.signal,
-      cache: "no-store"
-    });
-    const raw = await response.text();
-    let data;
-    try { data = JSON.parse(raw); }
-    catch (_) { throw new Error("Server returned an unreadable response (HTTP " + response.status + ")."); }
-    if (!response.ok) throw new Error(data.error || "AI request failed (HTTP " + response.status + ").");
-    if (!data || typeof data.answer !== "string" || !data.answer.trim()) throw new Error("The AI returned an empty response.");
-    output.textContent = data.answer.trim();
-    status.textContent = "Design package received" + (data.model ? " • " + data.model : "") + ". Verify calculations before use.";
-  } catch (error) {
-    const message = error && error.name === "AbortError" ? "Request timed out after 60 seconds." : (error && error.message ? error.message : "Could not connect to the engineering AI.");
-    status.textContent = "Formula & Design AI error: " + message;
-    output.textContent = "The button handler ran, but no design package was received.";
-  } finally {
-    clearTimeout(timeout);
-    button.dataset.busy = "false";
-    button.disabled = false;
-    button.textContent = "Generate Design Package ↗";
-  }
-  return false;
-};</script>
+</script>
 
 </body></html>
