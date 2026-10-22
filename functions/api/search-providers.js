@@ -35,16 +35,15 @@ export async function onRequestPost({request,env}){
      continue;
     }
     if(!r.ok){lastMessage="DuckDuckGo returned HTTP "+r.status+".";continue;}
-    const matches=[...html.matchAll(/<a\\b([^>]*?)class=["'][^"']*result-link[^"']*["']([^>]*)>([\\s\\S]*?)<\\/a>|<a\\b([^>]*?)class=["'][^"']*result__a[^"']*["']([^>]*)>([\\s\\S]*?)<\\/a>/gi)];
+const matches=[...html.matchAll(/<a\b[^>]*class=["'][^"']*(?:result__a|result-link)[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
     const items=[];
     for(const m of matches){
-     const attrs=(m[1]||"")+(m[2]||"")+(m[4]||"")+(m[5]||"");
-     let href=(attrs.match(/href=["']([^"']+)["']/i)||[])[1]||"";
-     let title=(m[3]||m[6]||"").replace(/<[^>]+>/g," ").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/g,"'").replace(/\\s+/g," ").trim();
+     let href=m[1]||"";
+     let title=(m[2]||"").replace(/<[^>]+>/g," ").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/g,"'").replace(/\s+/g," ").trim();
      if(href.startsWith("//"))href="https:"+href;
      const wrapped=href.match(/[?&](?:uddg|u)=([^&]+)/i);
      if(wrapped){try{href=decodeURIComponent(wrapped[1]);}catch{}}
-     if(/^https?:\\/\\//i.test(href)&&title&&!items.some(x=>x.url===href))items.push({title,url:href});
+     if(/^https?:\/\//i.test(href)&&title&&!items.some(x=>x.url===href))items.push({title,url:href});
      if(items.length>=3)break;
     }
     if(items.length)return {ok:true,count:items.length,example:items[0]};
