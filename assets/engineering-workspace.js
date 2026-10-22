@@ -19,3 +19,65 @@
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
+
+/* ChatGPT-clone-inspired conversation shell for NOVA's specialist AI pages.
+   Keeps each page's existing /api/engineer request handler and discipline prompt intact. */
+(()=>{
+ const task=document.getElementById('task'),result=document.getElementById('result'),send=document.getElementById('send');
+ if(!task||!result||!send||!document.querySelector('.layout'))return;
+ const pageKey='nova-chat-history:'+location.pathname;
+ const layout=document.querySelector('.layout'),panels=layout.querySelectorAll(':scope > .panel');
+ if(panels.length<2)return;
+ const inputPanel=panels[0],outputPanel=panels[1],formTitle=inputPanel.querySelector('h2'),outputTitle=outputPanel.querySelector('h2');
+ document.body.classList.add('eu-chat-page');
+ const app=document.createElement('div');app.className='eu-chat-app';
+ const sidebar=document.createElement('aside');sidebar.className='eu-chat-sidebar';
+ const newBtn=document.createElement('button');newBtn.type='button';newBtn.className='eu-chat-new';newBtn.innerHTML='<span aria-hidden="true">＋</span><span>New chat</span>';
+ const histTitle=document.createElement('div');histTitle.className='eu-chat-sidebar-title';histTitle.textContent='Recent chats';
+ const history=document.createElement('div');history.className='eu-chat-history';
+ const main=document.createElement('section');main.className='eu-chat-main';
+ const topline=document.createElement('div');topline.className='eu-chat-topline';
+ const title=document.createElement('strong');title.textContent=(document.title.split('|')[0]||'NOVA Engineering AI').trim();
+ const menuBtn=document.createElement('button');menuBtn.type='button';menuBtn.className='eu-chat-new';menuBtn.style.width='auto';menuBtn.style.padding='6px 10px';menuBtn.textContent='☰ Chats';menuBtn.addEventListener('click',()=>document.body.classList.toggle('eu-sidebar-open'));
+ topline.append(menuBtn,title);
+ const transcript=document.createElement('div');transcript.className='eu-chat-transcript';transcript.setAttribute('aria-live','polite');
+ const empty=document.createElement('div');empty.className='eu-chat-empty';empty.innerHTML='<h1>What are we engineering today?</h1><p>Ask a question, develop a concept, or work through an engineering calculation.</p>';transcript.append(empty);
+ const composerWrap=document.createElement('div');composerWrap.className='eu-chat-compose-wrap';
+ const composer=document.createElement('div');composer.className='eu-chat-composer';
+ const composeBottom=document.createElement('div');composeBottom.className='eu-chat-composer-bottom';
+ const status=document.createElement('div');status.className='eu-chat-status';
+ const copyActions=document.createElement('div');copyActions.className='eu-chat-copy-actions';
+ const originalStatus=inputPanel.querySelector('#status'),styleLabel=inputPanel.querySelector('label[for="style"]'),styleSelect=document.getElementById('style'),clearBtn=document.getElementById('clear'),copyBtn=document.getElementById('copy'),downloadBtn=document.getElementById('download'),prompts=inputPanel.querySelector('.prompts'),safety=inputPanel.querySelector('.safety');
+ let conversations=[];let activeId=null;let lastResult='';
+ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+ const save=()=>{try{localStorage.setItem(pageKey,JSON.stringify(conversations.slice(0,30)))}catch{}};
+ const active=()=>conversations.find(c=>c.id===activeId);
+ const addMessage=(role,content,quiet=false)=>{if(!content)return;empty.remove();const node=document.createElement('article');node.className='eu-chat-message '+role;const avatar=document.createElement('div');avatar.className='eu-chat-avatar';avatar.textContent=role==='user'?'You':'N';const body=document.createElement('div');body.className='eu-chat-message-content';body.textContent=content;node.append(avatar,body);transcript.append(node);transcript.scrollTop=transcript.scrollHeight;if(!quiet){const c=active();if(c){c.messages.push({role,content});if(role==='user'&&c.title==='New chat')c.title=content.slice(0,52);save();renderHistory()}}};
+ const renderHistory=()=>{history.replaceChildren();conversations.forEach(c=>{const b=document.createElement('button');b.type='button';b.textContent=c.title||'New chat';b.setAttribute('aria-current',String(c.id===activeId));b.addEventListener('click',()=>load(c.id));history.append(b)})};
+ const load=id=>{activeId=id;const c=active();transcript.replaceChildren();if(!c||!c.messages.length)transcript.append(empty);else c.messages.forEach(m=>addMessage(m.role,m.content,true));renderHistory();document.body.classList.remove('eu-sidebar-open');transcript.scrollTop=transcript.scrollHeight};
+ const fresh=()=>{const c={id:uid(),title:'New chat',messages:[]};conversations.unshift(c);activeId=c.id;task.value='';result.textContent='';result.className='result eu-chat-original-result';lastResult='';transcript.replaceChildren(empty);if(originalStatus)originalStatus.textContent='Ready for your next engineering question.';save();renderHistory();document.body.classList.remove('eu-sidebar-open');task.focus()};
+ try{const old=JSON.parse(localStorage.getItem(pageKey)||'[]');if(Array.isArray(old))conversations=old.filter(c=>c&&c.id&&Array.isArray(c.messages)).slice(0,30)}catch{}
+ // Move the existing controls into a ChatGPT-style composer; listeners remain attached.
+ app.append(sidebar,main);layout.replaceWith(app);
+ sidebar.append(newBtn,histTitle,history);
+ if(formTitle){const specialization=document.createElement('div');specialization.className='eu-chat-sidebar-title';specialization.textContent='Quick prompts';sidebar.append(specialization)}
+ if(prompts)sidebar.append(prompts);
+ if(safety)sidebar.append(safety);
+ main.append(topline,transcript,composerWrap);composerWrap.append(composer,copyActions,status);
+ composer.append(task,composeBottom);
+ if(styleSelect){if(styleLabel)composeBottom.append(styleLabel);composeBottom.append(styleSelect)}
+ const actions=inputPanel.querySelector('.actions');if(actions)composeBottom.append(actions);
+ if(originalStatus){status.append(originalStatus);originalStatus.style.display='block';originalStatus.className='eu-chat-status'}
+ if(copyBtn)copyActions.append(copyBtn);if(downloadBtn)copyActions.append(downloadBtn);
+ result.classList.add('eu-chat-original-result');outputPanel.remove();
+ if(clearBtn)clearBtn.addEventListener('click',()=>fresh());
+ newBtn.addEventListener('click',fresh);
+ task.setAttribute('placeholder','Message NOVA…');task.setAttribute('aria-label','Message NOVA engineering assistant');
+ task.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send.click()}});
+ document.addEventListener('click',e=>{if(e.target===send||e.target.closest('#send')){const text=task.value.trim();if(text){if(!active())fresh();addMessage('user',text);lastResult='';result.classList.add('eu-chat-original-result');}}},true);
+ const observer=new MutationObserver(()=>{const text=(result.textContent||'').trim();if(!text||result.classList.contains('loading')||text===lastResult||text.startsWith('Your ')&&text.endsWith(' response will appear here.'))return;lastResult=text;addMessage('assistant',text);});
+ observer.observe(result,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
+ renderHistory();
+ if(conversations.length)load(conversations[0].id);else{activeId=uid();conversations.unshift({id:activeId,title:'New chat',messages:[]});renderHistory();save()}
+ const resize=()=>{task.style.height='auto';task.style.height=Math.min(task.scrollHeight,200)+'px'};task.addEventListener('input',resize);
+})();
