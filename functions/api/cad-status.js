@@ -23,7 +23,7 @@ export async function onRequestGet({ env }) {
     return json(result);
   }
   try {
-    const response = await fetch(workerUrl + "/health", { headers: { "accept": "application/json" }, signal: AbortSignal.timeout(8000) });
+    const response = await fetch(workerUrl + "/health", { headers: { "accept": "application/json" }, signal: AbortSignal.timeout(30000) });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data || data.ok !== true) {
       result.worker.status = "unhealthy";
