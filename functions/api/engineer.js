@@ -109,7 +109,7 @@ async function liveWebSearch(query, env) {
 function formatSearchContext(results) {
   if (!results.length) return "";
   return "\n\nLIVE WEB SEARCH RESULTS (current search; snippets are leads, not guaranteed facts):\n" +
-    results.slice(0, 4).map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + (r.publishedDate ? "\nPublished date (search provider metadata; verify on article page): " + r.publishedDate : "") + "\nSnippet: " + String(r.snippet || "").slice(0, 350) + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
+    results.slice(0, 6).map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + (r.publishedDate ? "\nPublished date (search provider metadata; verify on article page): " + r.publishedDate : "") + "\nSnippet: " + String(r.snippet || "").slice(0, 250) + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
     "\n\nUse these live search results as evidence, not as unquestionable truth. Cite relevant sources with clickable links using exact URLs, distinguish sourced facts from inference, and say when results are insufficient or conflicting. For research requests, prioritize journal publisher pages, DOI landing pages, PubMed, or institutional repositories; report publication dates only when supplied in search metadata or visible on the source page; label online-first versus issue publication dates when distinguishable. Exclude irrelevant shopping, profile, regulation, and general-news pages when the user asks for peer-reviewed research. Summarize each paper’s question, method, main finding, and limitation using only supported details. Never invent citations, authors, dates, DOI values, peer-review status, or claim a search succeeded if no results were retrieved. DuckDuckGo Instant Answer results are limited summaries, not a complete web-search listing.";
 }
 
@@ -139,7 +139,9 @@ async function askGroq(env, profile, userMessages) {
       }
       if (response.status === 429 || /rate.?limit|tokens per minute|TPM/i.test(data.error?.message || "")) {
         const retryHeader = response.headers.get("retry-after");
-        const retryAfter = Math.max(1, Math.min(120, Number(retryHeader) || 20));
+        const errorText = String(data.error?.message || "");
+        const embeddedDelay = errorText.match(/(?:try again in|retry in)\s*(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?/i);
+        const retryAfter = Math.max(1, Math.min(120, Number(retryHeader) || (embeddedDelay ? Math.ceil(Number(embeddedDelay[1])) : 20)));
         return { error: "NOVA's AI provider is temporarily rate-limited. Please retry in about " + retryAfter + " seconds. Your question has not been lost.", code: "RATE_LIMITED", retryAfter };
       }
       lastError = data.error?.message || ("AI provider returned HTTP " + response.status);
@@ -169,7 +171,8 @@ Create a useful preliminary concept from the user's request. Supported primitive
   let conversation = Array.isArray(body.messages) ? body.messages : [{ role: "user", content: task }];
   conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-8).map(m => ({ role: m.role, content: m.content.slice(-3500) }));
   if (!conversation.length || conversation[conversation.length - 1].role !== "user") conversation.push({ role: "user", content: task });
-  const latestUserQuery = [...conversation].reverse().find(m => m.role === "user")?.content || task;
+  const latestUserQueryRaw = [...conversation].reverse().find(m => m.role === "user")?.content || task;
+  const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
   const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " recent peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
   let searchResults = [];
