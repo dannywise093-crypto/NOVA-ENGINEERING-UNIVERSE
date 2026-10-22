@@ -1393,3 +1393,75 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
   }
 }
 
+/* Compact chat composer: selector-sized single-line input and small typography */
+.conversation .user-input {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.conversation .user-input .input-box {
+  box-sizing: border-box !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 38px 0 10px !important;
+  border-radius: 8px !important;
+}
+.conversation .user-input textarea#message-input {
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  resize: none !important;
+  overflow-y: auto !important;
+  align-self: center !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+.conversation .user-input textarea#message-input::placeholder {
+  font-size: 12px !important;
+  line-height: 16px !important;
+  opacity: .8 !important;
+}
+.conversation .user-input #send-button {
+  position: absolute !important;
+  top: 50% !important;
+  right: 8px !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+.conversation .user-input #send-button i {
+  font-size: 12px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+@media (max-width: 760px) {
+  .conversation .user-input .input-box {
+    min-height: 34px !important;
+    height: 34px !important;
+    max-height: 34px !important;
+  }
+  .conversation .user-input textarea#message-input,
+  .conversation .user-input textarea#message-input::placeholder {
+    font-size: 12px !important;
+  }
+}
+
