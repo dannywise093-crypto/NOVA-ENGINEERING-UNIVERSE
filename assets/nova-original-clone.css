@@ -956,3 +956,12 @@ body { padding:0; font-size:14px; }
   #clone-status { padding:4px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+
+
+/* NOVA shared-chat code highlighting and copy controls */
+.message .content pre.hljs-code-block{margin:0;overflow:auto;padding:16px;border:1px solid #454654;border-radius:8px;background:#202123;color:#e8e8ef}
+.message .content pre.hljs-code-block code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55;white-space:pre}
+.hljs-copy-wrapper{position:relative;margin:10px 0 14px;min-width:0}
+.hljs-copy-button{position:absolute;top:8px;right:8px;z-index:2;border:1px solid #565869;border-radius:6px;background:#343541;color:#ececf1;padding:5px 9px;font-size:12px;cursor:pointer}
+.hljs-copy-button:hover{background:#454654}
+.hljs-copy-button[data-copied="true"]{border-color:#10a37f;color:#8de4c9}
