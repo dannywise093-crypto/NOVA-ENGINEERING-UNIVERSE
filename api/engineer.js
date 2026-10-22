@@ -66,16 +66,20 @@ module.exports = async function handler(req, res) {
   const requestedStyle = String(body && body.style || "research");
   const style = Object.prototype.hasOwnProperty.call(STYLES, requestedStyle) || requestedStyle === "scene" ? requestedStyle : "research";
   if (!PROFILES[discipline]) return res.status(400).json({ error: "Choose a supported engineering studio." });
+  // Spread the 12 discipline assistants across six dedicated keys; reserve key 5 for Formula & Design AI.
+  // Keys remain server-side and are never returned to the browser.
   const keyVariableByDiscipline = {
-    mechanical: "GROQ_API_KEY_1", civil: "GROQ_API_KEY_1", electrical: "GROQ_API_KEY_1",
-    aerospace: "GROQ_API_KEY_2", chemical: "GROQ_API_KEY_2", materials: "GROQ_API_KEY_2",
-    robotics: "GROQ_API_KEY_3", automotive: "GROQ_API_KEY_3", energy: "GROQ_API_KEY_3",
-    fluids: "GROQ_API_KEY_4", biomedical: "GROQ_API_KEY_4", software: "GROQ_API_KEY_4"
+    mechanical: "GROQ_API_KEY_1", civil: "GROQ_API_KEY_1",
+    electrical: "GROQ_API_KEY_2", aerospace: "GROQ_API_KEY_2",
+    chemical: "GROQ_API_KEY_3", materials: "GROQ_API_KEY_3",
+    robotics: "GROQ_API_KEY_4", automotive: "GROQ_API_KEY_4",
+    energy: "GROQ_API_KEY_6", fluids: "GROQ_API_KEY_6",
+    biomedical: "GROQ_API_KEY_7", software: "GROQ_API_KEY_7"
   };
   const keyVariable = body && body.assistant === "formula-design-ai" ? "GROQ_API_KEY_5" : keyVariableByDiscipline[discipline];
-  // Use the discipline-specific key when configured; retain the old key as a safe migration fallback.
+  // Keep the assigned key primary; use the legacy shared key only as a migration fallback.
   const key = process.env[keyVariable] || process.env.GROQ_API_KEY;
-  if (!key) return res.status(503).json({ error: keyVariable + " is not configured in Vercel Production. Add this variable for the selected engineering assistant (or configure GROQ_API_KEY as a shared fallback)." });
+  if (!key) return res.status(503).json({ error: keyVariable + " is not configured in the server's production environment. Add this variable for the selected engineering assistant (or configure GROQ_API_KEY as a shared fallback)." });
   if (task.length < 8) return res.status(400).json({ error: "Please provide a more detailed engineering task (at least 8 characters)." });
   if (task.length > 8000) return res.status(413).json({ error: "Task is too long. Keep it under 8,000 characters." });
   const [role, focus] = PROFILES[discipline];
@@ -154,10 +158,10 @@ module.exports = async function handler(req, res) {
       const providerMessage = providerError && typeof providerError.message === "string" ? providerError.message : "";
       console.error("Groq fallback failed", JSON.stringify({ status, model: result.model, code: providerError && providerError.code }));
       if (status === 401 || status === 403) {
-        return res.status(502).json({ error: "Groq rejected the configured API key. Check that GROQ_API_KEY_5 is valid and enabled in Vercel Production." });
+        return res.status(502).json({ error: "Groq rejected the configured API key. Check that the selected assistant’s assigned Groq key is valid and enabled in your server environment." });
       }
       if (status === 429) {
-        return res.status(503).json({ error: "Groq rate limit or free-tier quota reached for both models. Wait for the quota to reset, or use another valid Groq key in Vercel Production." });
+        return res.status(503).json({ error: "Groq rate limit or free-tier quota reached for both models. Wait for the quota to reset or configure a valid key with available quota for this assistant." });
       }
       if (status === 400 && /model|decommission|not found|does not exist/i.test(providerMessage)) {
         return res.status(502).json({ error: "Groq rejected both configured model choices. Check model availability for your Groq account." });
