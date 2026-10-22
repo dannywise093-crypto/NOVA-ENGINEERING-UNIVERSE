@@ -160,6 +160,7 @@ async function askGroq(env, profile, userMessages) {
     .map(n => env["GROQ_API_KEY_" + n]).filter(Boolean);
   if (!keys.length) return { error: "AI is not configured: production Groq secrets are missing." };
   let lastError = "No AI response was returned.";
+  let rateLimitFailure = null;
   for (const key of keys) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -179,16 +180,27 @@ async function askGroq(env, profile, userMessages) {
       if (response.ok && data.choices?.[0]?.message?.content?.trim()) {
         return { answer: data.choices[0].message.content.trim(), model: data.model || env.GROQ_MODEL || "openai/gpt-oss-20b", assistant: profile.name };
       }
-      if (response.status === 429 || /rate.?limit|tokens per minute|TPM/i.test(data.error?.message || "")) {
+      if (response.status === 429 || /rate.?limit|tokens per minute|TPM|requests per day|tokens per day|quota exceeded/i.test(data.error?.message || "")) {
         const retryHeader = response.headers.get("retry-after");
         const errorText = String(data.error?.message || "");
-        const embeddedDelay = errorText.match(/(?:try again in|retry in)\s*(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?/i);
-        const retryAfter = Math.max(1, Math.min(120, Number(retryHeader) || (embeddedDelay ? Math.ceil(Number(embeddedDelay[1])) : 20)));
-        return { error: "NOVA's AI provider is temporarily rate-limited. Please retry in about " + retryAfter + " seconds. Your question has not been lost.", code: "RATE_LIMITED", retryAfter };
+        const embeddedDelay = errorText.match(/(?:try again in|retry in)\\s*(\\d+(?:\\.\\d+)?)\\s*s(?:ec(?:ond)?s?)?/i);
+        const isDailyLimit = /requests per day|tokens per day|RPD|TPD|daily limit|per day/i.test(errorText);
+        const retryAfter = Math.max(1, Math.min(3600, Number(retryHeader) || (embeddedDelay ? Math.ceil(Number(embeddedDelay[1])) : 60));
+        rateLimitFailure = {
+          error: isDailyLimit
+            ? "NOVA's AI provider has reached a daily quota. Waiting a few seconds may not fix it; check the provider's usage limits or configure another active API key."
+            : "NOVA's AI provider is temporarily rate-limited. Please wait about " + retryAfter + " seconds before trying again.",
+          code: "RATE_LIMITED",
+          retryAfter: isDailyLimit ? null : retryAfter,
+          limitType: isDailyLimit ? "daily" : "temporary"
+        };
+        // Try the next configured key before failing the request.
+        continue;
       }
       lastError = data.error?.message || ("AI provider returned HTTP " + response.status);
     } catch (e) { lastError = "Could not connect to the AI provider."; }
   }
+  if (rateLimitFailure) return rateLimitFailure;
   return { error: lastError };
 }
 
