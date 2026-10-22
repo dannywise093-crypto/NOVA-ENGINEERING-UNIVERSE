@@ -1133,3 +1133,33 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
  .conversations .info{color:#e9ddf7!important;border:1px dashed #9d7cb8!important;border-radius:9px!important}
  .conversations button{color:#e9ddf7!important;border-color:#9d7cb8!important;background:transparent!important}
 }
+
+
+/* Mature, restrained transcript typography; messages are plain, not card-like */
+#messages .message{background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;padding:14px 18px 0!important;gap:14px!important}
+#messages .message .user{max-width:30px!important;max-height:30px!important;width:30px!important;height:30px!important;flex:0 0 30px!important}
+#messages .message .user img{width:30px!important;height:30px!important;border-radius:50%!important;outline:0!important}
+#messages .message .user:after{display:none!important}
+#messages .message .content{gap:10px!important;min-width:0!important;color:#e5deeb!important;font-size:14px!important;line-height:1.65!important;font-weight:400!important}
+#messages .message .content p,#messages .message .content li,#messages .message .content code{font-size:14px!important;line-height:1.65!important;font-weight:400!important}
+#messages .message .content h1{font-size:20px!important;line-height:1.35!important;font-weight:600!important}
+#messages .message .content h2{font-size:17px!important;line-height:1.4!important;font-weight:600!important}
+#messages .message .content h3{font-size:15px!important;line-height:1.45!important;font-weight:600!important}
+#messages .message .content ul,#messages .message .content ol{padding-left:22px!important}
+#messages .message .content blockquote{border-left:2px solid #69517e!important;padding-left:12px!important;color:#c9bdd4!important}
+#messages .message .content pre{background:#100b16!important;border:1px solid rgba(195,158,225,.18)!important;border-radius:8px!important;padding:12px!important;overflow:auto!important}
+#messages .message .content pre code{font-size:12.5px!important;line-height:1.55!important}
+#messages .message .content :not(pre)>code{background:rgba(190,155,220,.1)!important;border:0!important;border-radius:4px!important;padding:1px 4px!important;font-size:12.5px!important}
+#messages .message .content a{color:#c7a7f2!important}
+#messages .message .content hr{border:0!important;border-top:1px solid rgba(195,158,225,.16)!important}
+#messages .message .content table{border-collapse:collapse!important;font-size:13px!important}
+#messages .message .content th,#messages .message .content td{border:1px solid rgba(195,158,225,.2)!important;padding:6px 9px!important}
+#messages .message .content p{margin:0 0 8px!important}
+@media(max-width:760px){
+ #messages .message{padding:12px 4px 0!important;gap:10px!important}
+ #messages .message .user,#messages .message .user img{width:26px!important;height:26px!important;max-width:26px!important;max-height:26px!important;flex-basis:26px!important}
+ #messages .message .content,#messages .message .content p,#messages .message .content li{font-size:13.5px!important;line-height:1.65!important}
+ #messages .message .content h1{font-size:18px!important}
+ #messages .message .content h2{font-size:16px!important}
+ #messages .message .content h3{font-size:14.5px!important}
+}
