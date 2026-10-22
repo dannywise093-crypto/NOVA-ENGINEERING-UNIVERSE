@@ -644,3 +644,12 @@ const imageButton=byId("euGenerateImage");
 
 <script src="assets/engineering-workspace.js" defer></script>
 </body></html>
+
+/* Keep AI assistants off the homepage as embedded tools: each assistant is opened only from its own directory link/page. */
+#engineeringAI,#novaDisciplineAssistants{display:none!important}
+#ai-directory{scroll-margin-top:80px}
+#ai-directory .cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}
+#ai-directory .card{background:#171717;border:1px solid #343434;border-radius:12px;color:#ececec}
+#ai-directory .card p{color:#b5b5b5}
+#ai-directory .card .textbtn{color:#d0d0d0}
+#ai-directory .card:hover{border-color:#666;box-shadow:0 10px 32px #0005}

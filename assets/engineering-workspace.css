@@ -438,3 +438,65 @@ body{
 @media(max-width:760px){
  .assistant-sidebar{background:linear-gradient(145deg,rgba(255,255,255,.06),rgba(12,8,20,.96) 40%,rgba(61,29,94,.86))!important}
 }
+
+
+/* Reference-aligned ChatGPT Clone layout: charcoal surfaces, compact sidebar, centered chat and restrained accents. */
+body:has(.assistant-app){background:#212121!important;color:#ececec!important;background-image:none!important}
+.assistant-app{
+  background:#212121!important;
+  color:#ececec!important;
+  grid-template-columns:260px minmax(0,1fr)!important;
+}
+.assistant-sidebar{
+  background:#171717!important;
+  border:0!important;
+  border-right:1px solid #2b2b2b!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+.assistant-top{
+  background:#212121!important;
+  border:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+.assistant-layout{width:min(100%,900px)!important;margin-inline:auto!important}
+.assistant-layout .intro{
+  background:transparent!important;border:0!important;box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding:18px 12px!important;
+}
+.assistant-layout .composer{
+  background:#303030!important;border:1px solid #414141!important;border-radius:24px!important;
+  box-shadow:0 3px 14px rgba(0,0,0,.2)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+.assistant-layout .composer:before,.assistant-layout .intro:before{display:none!important}
+.assistant-layout .composer textarea{color:#f4f4f4!important}
+.assistant-layout .composer textarea::placeholder{color:#a7a7a7!important}
+.bubble{
+  background:transparent!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  color:#ececec!important;max-width:min(100%,800px)!important;padding:12px 14px!important;
+}
+.message.user .bubble{
+  background:#2f2f2f!important;border:0!important;border-radius:20px!important;padding:10px 16px!important;
+}
+.assistant-layout .intro .eyebrow,.eyebrow,.welcome-kicker{color:#bdbdbd!important}
+.assistant-side-btn,.history-row,.history-open,.history-delete{
+  background:transparent!important;border-color:transparent!important;color:#ececec!important;
+  box-shadow:none!important;border-radius:9px!important;
+}
+.assistant-side-btn:hover,.history-row:hover,.history-row.active{
+  background:#2a2a2a!important;border-color:transparent!important;
+}
+.assistant-brand-mark,.orb{
+  background:#2a2a2a!important;border:1px solid #414141!important;color:#f2f2f2!important;
+  box-shadow:none!important;
+}
+.assistant-layout .send{
+  background:#f4f4f4!important;color:#171717!important;border:0!important;border-radius:50%!important;
+  box-shadow:none!important;min-width:38px;min-height:38px;
+}
+.assistant-layout .send:hover{background:#fff!important;box-shadow:none!important}
+.assistant-layout #status,.assistant-layout .footer-note{color:#a3a3a3!important}
+@media(max-width:760px){.assistant-app{grid-template-columns:minmax(0,1fr)!important}.assistant-sidebar{background:#171717!important}}
