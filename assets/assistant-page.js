@@ -1,0 +1,19 @@
+(()=>{'use strict';
+const $=id=>document.getElementById(id), cfg=window.NOVA_ASSISTANT||{};
+const key='nova-ai-chat-'+(cfg.id||'assistant'); let history=[]; let busy=false;
+const transcript=$('transcript'), input=$('prompt'), status=$('status'), send=$('send');
+function persist(){try{localStorage.setItem(key,JSON.stringify(history.slice(-80)))}catch{}}
+function render(){transcript.replaceChildren();if(!history.length){const w=document.createElement('div');w.className='assistant-welcome';w.innerHTML='<div class="orb">✳</div><h2>How can I help?</h2><p>Describe your engineering question, calculation, or design goal. I will keep the response focused on this assistant’s purpose.</p>';transcript.append(w);return}
+history.forEach((m,i)=>{const row=document.createElement('article');row.className='message '+m.role;const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=m.text;row.append(bubble);transcript.append(row)});transcript.scrollTop=transcript.scrollHeight}
+function add(role,text){history.push({role,text});persist();render()}
+async function sendPrompt(){if(busy)return;const task=input.value.trim();if(!task)return;input.value='';input.style.height='auto';add('user',task);busy=true;send.disabled=true;status.textContent='Working on your request…';
+try{let res,data,answer='';
+if(cfg.endpoint==='formula'){res=await fetch('/api/formula-design',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'formula',task}),signal:AbortSignal.timeout(90000)});data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||'Formula & Design AI request failed (HTTP '+res.status+').');answer=data.answer||'';if(data.research?.sources?.length)answer+='\n\nResearch sources:\n'+data.research.sources.map((s,i)=>(i+1)+'. '+s.title+'\n'+s.url).join('\n\n')}
+else{res=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:cfg.discipline||'mechanical',assistant:cfg.id||'engineering-ai',style:'design',task:'You are '+cfg.title+'. Your specialist purpose: '+cfg.purpose+'. Answer only within your specialty when possible. State assumptions, units, limitations and verification steps. Never claim a safety-critical design is certified.\n\nUser request: '+task}),signal:AbortSignal.timeout(90000)});data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||'Engineering AI request failed (HTTP '+res.status+').');answer=typeof data.answer==='string'?data.answer:''}
+if(!answer.trim())throw Error('The AI returned an empty response. Please try again.');add('assistant',answer);status.textContent='Response ready.'}
+catch(e){add('assistant','I could not complete that request. '+(e.message||'Please retry.'));status.textContent='Request failed. Check the deployed API and its AI key configuration.'}
+finally{busy=false;send.disabled=false;input.focus()}}
+$('assistantTitle').textContent=cfg.title||'NOVA Engineering AI';$('assistantPurpose').textContent=cfg.purpose||'Engineering support';document.title=(cfg.title||'NOVA AI')+' | NOVA Engineering Universe';
+$('close').onclick=()=>location.href='index.html#ai-directory';$('clear').onclick=()=>{history=[];persist();render();status.textContent='This assistant’s conversation history was cleared.'};send.onclick=sendPrompt;input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendPrompt()}});input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,190)+'px'});
+try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved))history=saved.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.text==='string')}catch{}render();
+})();
