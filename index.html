@@ -337,7 +337,7 @@ $('saveAIWork').onclick=()=>{if(!lastAIResponse){$('aiStatus').textContent='Ther
 $('buildAIModel').onclick=()=>{const text=$('aiOutput').textContent;const match=text.match(/```(?:eu-scene|json)\s*([\s\S]*?)```/i);if(!match){$('aiStatus').textContent='No machine-readable scene found. Ask the AI to include a fenced eu-scene JSON block with boxes and cylinders.';return}try{const spec=JSON.parse(match[1]);if(!window.EU3D||!window.EU3D.renderSpec)throw new Error('3D engine is still loading');window.EU3D.renderSpec(spec);$('modelName').textContent='AI GENERATED / CONCEPT';$('dimensions').textContent='AI scene • mm';$('aiStatus').textContent='AI scene loaded into the interactive 3D viewport. Geometry is conceptual and unvalidated.';document.getElementById('studio').scrollIntoView({behavior:'smooth'})}catch(e){$('aiStatus').textContent='Could not load AI scene: '+e.message}};
 $('copyAIWork').onclick=async()=>{const t=$('aiOutput').textContent;try{await navigator.clipboard.writeText(t);$('aiStatus').textContent='Response copied.'}catch{$('aiStatus').textContent='Clipboard not available in this browser; select and copy the response text.'}};
 
-$('menu').onclick=()=>$('links').classList.toggle('open');document.querySelectorAll('#links a').forEach(a=>a.onclick=()=>$('links').classList.remove('open'));
+// Mobile menu behavior is initialized in the standalone script below.
 const checklist=['Define function and operating environment','Set loads, speeds, and duty cycle','Choose candidate materials','Set size, mass, and cost limits','Identify hazards and safety factors','Plan tests and validation'];
 $('checks').innerHTML=checklist.map((s,i)=>'<label style="display:flex;gap:9px;align-items:start;margin:12px 0;color:#c2d5e7"><input type="checkbox" class="check" style="width:auto;margin-top:5px"> '+s+'</label>').join('');
 async function brief(){const t=$('topic').value.trim();if(!t){$('researchAnswer').textContent='Enter a research topic first.';return}const selected=[...document.querySelectorAll('.check')].map((e,i)=>e.checked?checklist[i]:null).filter(Boolean);const btn=$('researchBtn');btn.disabled=true;btn.textContent='Building with live AI…';$('researchAnswer').textContent='Connecting to Engineering AI and preparing your research brief…';try{const task='Create a structured engineering research brief for this topic: '+t+'\\n\\nInclude: (1) problem statement and objective; (2) requirements and questions that need clarification; (3) at least three plausible concepts and trade-offs; (4) preliminary governing principles/equations and variables without inventing missing values; (5) candidate materials with evidence limitations; (6) research keywords and relevant standards to look up; (7) analysis, prototype and validation plan; (8) safety, failure modes and risks; (9) assumptions, unknowns and next decisions. Distinguish established facts from hypotheses. Do not fabricate citations or claim tests/simulations were performed. Mark results as preliminary and require independent professional verification for safety-critical applications. User checklist already completed: '+(selected.join('; ')||'None yet');const res=await fetch('/api/engineer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discipline:'mechanical',task})});const data=await res.json();if(!res.ok||!data.answer)throw new Error(data.error||'The AI endpoint returned no answer.');const result='LIVE AI ENGINEERING RESEARCH BRIEF\\n\\nTopic: '+t+'\\n\\n'+data.answer+'\\n\\nChecklist already completed: '+(selected.join('; ')||'None yet')+'\\n\\nEvidence note: AI-generated guidance is preliminary. Verify sources, standards, calculations and safety-critical conclusions independently.';$('researchAnswer').textContent=result;saveItem('AI research brief — '+t,'Research Brief',{topic:t,brief:result,model:data.model||'AI',assistant:data.assistant||'Engineering AI'});}catch(e){$('researchAnswer').textContent='Live AI could not build the brief. '+e.message+'\\n\\nCheck that the Cloudflare Pages production deployment is current and at least one GROQ_API_KEY_1…GROQ_API_KEY_7 secret is configured. No placeholder brief was substituted.';}finally{btn.disabled=false;btn.textContent='Build research brief';}}
@@ -607,4 +607,38 @@ const imageButton=byId("euGenerateImage");
 </script>
 
 <script src="assets/engineering-workspace.js" defer></script>
+<script>
+/* Reliable mobile navigation: independent of the main homepage script. */
+(function () {
+  function initNovaMenu() {
+    const button = document.getElementById('menu');
+    const links = document.getElementById('links');
+    if (!button || !links || button.dataset.menuReady === '1') return;
+    button.dataset.menuReady = '1';
+    button.setAttribute('aria-controls', 'links');
+    button.setAttribute('aria-expanded', 'false');
+    button.addEventListener('click', function () {
+      const isOpen = links.classList.toggle('open');
+      button.setAttribute('aria-expanded', String(isOpen));
+    });
+    links.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        links.classList.remove('open');
+        button.setAttribute('aria-expanded', 'false');
+      });
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        links.classList.remove('open');
+        button.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initNovaMenu);
+  } else {
+    initNovaMenu();
+  }
+})();
+</script>
 </body></html>
