@@ -1163,3 +1163,36 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
  #messages .message .content h2{font-size:16px!important}
  #messages .message .content h3{font-size:14.5px!important}
 }
+
+
+/* Transcript cleanup: flatten both user and assistant messages without affecting shell/input */
+#messages .message,
+#messages .message.user-message,
+#messages .message.assistant-message,
+#messages .message .content,
+#messages .message .message-content,
+#messages .message .markdown,
+#messages .message .markdown-body{
+ background:transparent!important;
+ background-color:transparent!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+ outline:0!important;
+}
+#messages .message{display:flex!important;align-items:flex-start!important;padding:12px 18px!important;margin:0!important}
+#messages .message .content,
+#messages .message .message-content,
+#messages .message .markdown,
+#messages .message .markdown-body{
+ padding:0!important;margin:0!important;min-width:0!important;
+ color:#e5deeb!important;font-size:14px!important;line-height:1.65!important;font-weight:400!important;
+}
+#messages .message p,#messages .message li{font-size:14px!important;line-height:1.65!important}
+#messages .message .user{width:28px!important;height:28px!important;flex:0 0 28px!important;margin-right:12px!important}
+#messages .message .user img{width:28px!important;height:28px!important;max-width:28px!important;max-height:28px!important}
+@media(max-width:760px){
+ #messages .message{padding:10px 4px!important}
+ #messages .message .content,#messages .message .message-content,#messages .message .markdown,#messages .message .markdown-body,
+ #messages .message p,#messages .message li{font-size:13px!important;line-height:1.65!important}
+}
