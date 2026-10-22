@@ -26,6 +26,33 @@ function decodeHtml(s) {
   return String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
 }
 async function liveWebSearch(query) {
+  // Official DuckDuckGo Instant Answer API: free/keyless, but not a full web search API.
+  try {
+    const apiUrl = new URL("https://api.duckduckgo.com/");
+    apiUrl.searchParams.set("q", query.slice(0, 500));
+    apiUrl.searchParams.set("format", "json");
+    apiUrl.searchParams.set("no_html", "1");
+    apiUrl.searchParams.set("skip_disambig", "1");
+    apiUrl.searchParams.set("t", "novaengineeringuniverse");
+    const response = await fetch(apiUrl, { headers: { "accept": "application/json" }, signal: AbortSignal.timeout(6000) });
+    if (response.ok) {
+      const data = await response.json();
+      const results = [];
+      const add = (title, url, snippet = "") => {
+        if (typeof url === "string" && /^https?:\/\//i.test(url) && !results.some(r => r.url === url)) {
+          results.push({ title: String(title || snippet || "DuckDuckGo result").slice(0, 200), url, snippet: String(snippet || "").slice(0, 600), provider: "DuckDuckGo" });
+        }
+      };
+      if (data.AbstractText) add(data.Heading || data.AbstractSource, data.AbstractURL, data.AbstractText);
+      if (typeof data.Answer === "string" && data.Answer) add(data.Heading || "DuckDuckGo Instant Answer", "https://duckduckgo.com/?q=" + encodeURIComponent(query), data.Answer);
+      if (data.Definition) add(data.DefinitionSource || "Definition", data.DefinitionURL, data.Definition);
+      for (const item of data.Results || []) add(item.Text, item.FirstURL, item.Text);
+      const flatten = items => { for (const item of items || []) { if (item.Topics) flatten(item.Topics); else add(item.Text, item.FirstURL, item.Text); } };
+      flatten(data.RelatedTopics);
+      if (results.length) return results.slice(0, 6);
+    }
+  } catch { /* Continue to HTML fallback. */ }
+
   const headers = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -44,25 +71,25 @@ async function liveWebSearch(query) {
       if (!response.ok || response.status === 202 || /challenge-form|anomaly-modal|captcha|select all squares/i.test(html)) continue;
       const results = [];
       const pattern = /<a\b[^>]*class=["'][^"']*(?:result__a|result-link)[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-      let m;
-      while ((m = pattern.exec(html)) && results.length < 6) {
-        let url = m[1] || "";
-        const title = decodeHtml(m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")).trim();
+      let match;
+      while ((match = pattern.exec(html)) && results.length < 6) {
+        let url = match[1] || "";
+        const title = decodeHtml(match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")).trim();
         if (url.startsWith("//")) url = "https:" + url;
         const wrapped = url.match(/[?&](?:uddg|u)=([^&]+)/i);
         if (wrapped) { try { url = decodeURIComponent(wrapped[1]); } catch {} }
-        if (/^https?:\/\//i.test(url) && title && !results.some(r => r.url === url)) results.push({ title, url, snippet: "" });
+        if (/^https?:\/\//i.test(url) && title && !results.some(r => r.url === url)) results.push({ title, url, snippet: "", provider: "DuckDuckGo" });
       }
       if (results.length) return results;
-    } catch { /* try the keyless HTML fallback */ }
+    } catch { /* Search failure must not block assistant responses. */ }
   }
   return [];
 }
 function formatSearchContext(results) {
   if (!results.length) return "";
   return "\n\nLIVE WEB SEARCH RESULTS (current search; snippets are leads, not guaranteed facts):\n" +
-    results.map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + "\nSnippet: " + r.snippet).join("\n\n") +
-    "\n\nGround current claims in these sources. Cite relevant sources using their exact URLs, distinguish facts from inference, and say when results are insufficient or conflicting.";
+    results.map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + "\nSnippet: " + r.snippet + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
+    "\n\nGround current claims in these sources. Cite relevant sources using their exact URLs, distinguish facts from inference, and say when results are insufficient or conflicting. DuckDuckGo Instant Answer results are limited summaries, not a complete web-search listing; attribute DuckDuckGo and the underlying source when using them.";
 }
 
 async function askGroq(env, profile, userMessages) {
