@@ -190,9 +190,9 @@ function formatSearchContext(results) {
       if (response.status === 429 || /rate.?limit|tokens per minute|TPM|requests per day|tokens per day|quota exceeded/i.test(data.error?.message || "")) {
         const retryHeader = response.headers.get("retry-after");
         const errorText = String(data.error?.message || "");
-        const embeddedDelay = errorText.match(/(?:try again in|retry in)\\s*(\\d+(?:\\.\\d+)?)\\s*s(?:ec(?:ond)?s?)?/i);
+        const embeddedDelay = errorText.match(/(?:try again in|retry in)\s*(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?/i);
         const isDailyLimit = /requests per day|tokens per day|RPD|TPD|daily limit|per day/i.test(errorText);
-        const retryAfter = Math.max(1, Math.min(3600, Number(retryHeader) || (embeddedDelay ? Math.ceil(Number(embeddedDelay[1])) : 60));
+        const retryAfter = Math.max(1, Math.min(3600, Number(retryHeader) || (embeddedDelay ? Math.ceil(Number(embeddedDelay[1])) : 60)));
         rateLimitFailure = {
           error: isDailyLimit
             ? "NOVA's AI provider has reached a daily quota. Waiting a few seconds may not fix it; check the provider's usage limits or configure another active API key."
