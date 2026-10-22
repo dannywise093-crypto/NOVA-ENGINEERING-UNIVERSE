@@ -8,6 +8,8 @@
 :root{color-scheme:dark;--bg:#080d15;--panel:#111a27;--line:#2a3b50;--text:#edf5ff;--muted:#a2b3c8;--cyan:#65d8ff;--green:#71e8b7}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#12314c,transparent 45%),var(--bg);color:var(--text);font:15px/1.55 system-ui,Arial,sans-serif}a{color:var(--cyan)}.wrap{width:min(1120px,92%);margin:auto}.top{padding:15px 0;border-bottom:1px solid var(--line);background:#080d15eF;position:sticky;top:0}.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-weight:900;letter-spacing:.7px}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:2px}.btn{display:inline-block;border:1px solid #3a5873;background:#17283a;color:var(--text);padding:11px 14px;border-radius:8px;text-decoration:none;font-weight:750}.btn.primary{background:linear-gradient(100deg,#65d8ff,#7795ff);color:#07111d;border:0}.hero{padding:38px 0 24px}.eyebrow{font-size:11px;color:var(--cyan);letter-spacing:2px;font-weight:850}.hero h1{font-size:clamp(30px,5vw,50px);line-height:1.05;margin:10px 0}.hero p,.muted{color:var(--muted)}.row{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}.card h2{font-size:18px;margin:0 0 8px}.card p{color:var(--muted);font-size:13px}.stage{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#070b11}.stage-head{padding:12px 15px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;background:#121b27;border-bottom:1px solid var(--line)}iframe{display:block;width:100%;height:min(72vh,760px);min-height:480px;border:0;background:#0b1119}.warning{background:#211d12;border:1px solid #6d5728;color:#ffdda0;padding:13px;border-radius:9px;margin:15px 0;font-size:13px}.filebox{border:1px dashed #49617b;padding:16px;border-radius:9px;background:#0a121d}.steps{padding-left:20px;color:var(--muted)}code{color:#a9e8ff;overflow-wrap:anywhere}footer{padding:28px 0;color:var(--muted);font-size:12px}@media(max-width:760px){.grid{grid-template-columns:1fr}iframe{min-height:540px;height:70vh}.top .wrap{align-items:flex-start}.top .btn{font-size:12px;padding:9px}}
 </style>
+<link rel="stylesheet" href="assets/engineering-workspace.css">
+
 </head>
 <body>
 <header class="top"><div class="wrap"><a class="brand" href="index.html" style="text-decoration:none;color:inherit">ENGINEERING UNIVERSE<small>AI • RESEARCH • CAD</small></a><a class="btn" href="index.html">← Main workspace</a></div></header>
@@ -295,4 +297,5 @@
  check();
 })();
 </script>
+<script src="assets/engineering-workspace.js" defer></script>
 </body></html>
