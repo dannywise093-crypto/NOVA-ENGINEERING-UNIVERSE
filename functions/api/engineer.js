@@ -37,7 +37,7 @@ async function liveWebSearch(query, env) {
       });
       if (response.ok) {
         const data = await response.json();
-        const results = (data.results || []).filter(r => typeof r.url === "string" && /^https?:\\/\\//i.test(r.url)).map(r => ({
+        const results = (data.results || []).filter(r => typeof r.url === "string" && r.url.startsWith("http://") || (typeof r.url === "string" && r.url.startsWith("https://"))).map(r => ({
           title: String(r.title || "Web search result").slice(0, 200), url: r.url,
           snippet: String(r.content || "").slice(0, 700), provider: "Tavily"
         })).filter((r, i, a) => a.findIndex(x => x.url === r.url) === i).slice(0, 6);
