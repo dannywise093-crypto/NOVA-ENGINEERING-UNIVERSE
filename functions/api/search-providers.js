@@ -14,44 +14,38 @@ export async function onRequestPost({request,env}){
  testProvider("google",Boolean(env.GOOGLE_API_KEY&&env.GOOGLE_CSE_ID),async()=>{const u=new URL("https://www.googleapis.com/customsearch/v1");u.searchParams.set("key",env.GOOGLE_API_KEY);u.searchParams.set("cx",env.GOOGLE_CSE_ID);u.searchParams.set("q",query);const r=await fetch(u,{signal:timeout(8000)});const d=await r.json();if(!r.ok)return {ok:false,message:r.status===401||r.status===403?"Google rejected the credentials or API configuration.":"Google Search request failed ("+r.status+")."};const items=d.items||[];return {ok:true,count:items.length,example:items[0]?{title:items[0].title,url:items[0].link}:null};}),
  testProvider("bing",Boolean(env.BING_SEARCH_API_KEY),async()=>{const u=new URL("https://api.bing.microsoft.com/v7.0/search");u.searchParams.set("q",query);u.searchParams.set("count","3");const r=await fetch(u,{headers:{"Ocp-Apim-Subscription-Key":env.BING_SEARCH_API_KEY},signal:timeout(8000)});const d=await r.json().catch(()=>({}));if(!r.ok)return {ok:false,message:"Bing endpoint returned HTTP "+r.status+"; verify that your Microsoft search API subscription is supported."};const items=d.webPages?.value||[];return {ok:true,count:items.length,example:items[0]?{title:items[0].name,url:items[0].url}:null};}),
  testProvider("duckduckgo",true,async()=>{
-  const headers={
-   "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-   "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language":"en-US,en;q=0.9",
-   "referer":"https://duckduckgo.com/",
-   "sec-fetch-dest":"document","sec-fetch-mode":"navigate","sec-fetch-site":"same-site"
+  const apiUrl=new URL("https://api.duckduckgo.com/");
+  apiUrl.searchParams.set("q",query);
+  apiUrl.searchParams.set("format","json");
+  apiUrl.searchParams.set("no_html","1");
+  apiUrl.searchParams.set("skip_disambig","1");
+  apiUrl.searchParams.set("t","novaengineeringuniverse");
+  const r=await fetch(apiUrl,{headers:{"accept":"application/json"},signal:timeout(8000)});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)return {ok:false,message:"DuckDuckGo Instant Answer API returned HTTP "+r.status+"."};
+  const items=[];
+  const add=(title,url,text="")=>{
+   if(typeof url==="string"&&/^https?:\/\//i.test(url)&&!items.some(x=>x.url===url)){
+    items.push({title:String(title||text||"DuckDuckGo result").slice(0,200),url,snippet:String(text||"").slice(0,500)});
+   }
   };
-  const candidates=[
-   "https://html.duckduckgo.com/html/?q="+encodeURIComponent(query),
-   "https://lite.duckduckgo.com/lite/?q="+encodeURIComponent(query)
-  ];
-  let lastMessage="DuckDuckGo did not return parseable search results.";
-  for(const endpoint of candidates){
-   try{
-    const r=await fetch(endpoint,{headers,redirect:"follow",signal:timeout(8000)});
-    const html=await r.text();
-    if(r.status===202||/challenge-form|anomaly-modal|captcha|select all squares/i.test(html)){
-     lastMessage="DuckDuckGo returned an automated-request challenge. It does not provide an official full web-search API key; try again later or use a supported search API.";
-     continue;
-    }
-    if(!r.ok){lastMessage="DuckDuckGo returned HTTP "+r.status+".";continue;}
-const matches=[...html.matchAll(/<a\b[^>]*class=["'][^"']*(?:result__a|result-link)[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
-    const items=[];
-    for(const m of matches){
-     let href=m[1]||"";
-     let title=(m[2]||"").replace(/<[^>]+>/g," ").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/g,"'").replace(/\s+/g," ").trim();
-     if(href.startsWith("//"))href="https:"+href;
-     const wrapped=href.match(/[?&](?:uddg|u)=([^&]+)/i);
-     if(wrapped){try{href=decodeURIComponent(wrapped[1]);}catch{}}
-     if(/^https?:\/\//i.test(href)&&title&&!items.some(x=>x.url===href))items.push({title,url:href});
-     if(items.length>=3)break;
-    }
-    if(items.length)return {ok:true,count:items.length,example:items[0]};
-    lastMessage="DuckDuckGo responded, but no search-result links could be parsed. Its page format may have changed or access may be restricted.";
-   }catch(e){lastMessage=e?.name==="TimeoutError"?"DuckDuckGo search timed out.":"Could not reach DuckDuckGo search."}
-  }
-  return {ok:false,message:lastMessage};
-}),
+  if(d.AbstractText)add(d.Heading||d.AbstractSource,d.AbstractURL,d.AbstractText);
+  if(typeof d.Answer==="string"&&d.Answer)add(d.Heading||"DuckDuckGo Instant Answer","https://duckduckgo.com/?q="+encodeURIComponent(query),d.Answer);
+  if(d.Definition)add(d.DefinitionSource||"Definition",d.DefinitionURL,d.Definition);
+  for(const x of (d.Results||[]))add(x.Text,x.FirstURL,x.Text);
+  const flatten=(xs)=>{for(const x of xs||[]){if(x.Topics)flatten(x.Topics);else add(x.Text,x.FirstURL,x.Text);}};
+  flatten(d.RelatedTopics);
+  if(items.length)return {ok:true,count:items.length,example:{title:items[0].title,url:items[0].url},message:"DuckDuckGo Instant Answer API succeeded (limited answers, not full web search)."};
+  const checkUrl=new URL("https://api.duckduckgo.com/");
+  for(const [k,v] of Object.entries({q:"engineering",format:"json",no_html:"1",skip_disambig:"1",t:"novaengineeringuniverse"}))checkUrl.searchParams.set(k,v);
+  const check=await fetch(checkUrl,{headers:{"accept":"application/json"},signal:timeout(8000)});
+  if(!check.ok)return {ok:false,message:"DuckDuckGo Instant Answer API returned HTTP "+check.status+"."};
+  const checkData=await check.json().catch(()=>({}));
+  const checkItems=[];
+  if(checkData.AbstractText&&checkData.AbstractURL)checkItems.push({title:checkData.Heading||"Engineering",url:checkData.AbstractURL});
+  for(const x of checkData.Results||[])if(x.FirstURL)checkItems.push({title:x.Text||"Engineering",url:x.FirstURL});
+  return {ok:true,count:checkItems.length,example:checkItems[0]||null,message:checkItems.length?"DuckDuckGo Instant Answer API is reachable; this query had no instant answer.":"DuckDuckGo Instant Answer API is reachable, but instant answers may be empty."};
+})),
  testProvider("brave",Boolean(env.BRAVE_SEARCH_API_KEY),async()=>{const u=new URL("https://api.search.brave.com/res/v1/web/search");u.searchParams.set("q",query);u.searchParams.set("count","3");const r=await fetch(u,{headers:{"X-Subscription-Token":env.BRAVE_SEARCH_API_KEY,"Accept":"application/json"},signal:timeout(8000)});const d=await r.json().catch(()=>({}));if(!r.ok)return {ok:false,message:"Brave Search returned HTTP "+r.status+"; verify API key and plan."};const items=d.web?.results||[];return {ok:true,count:items.length,example:items[0]?{title:items[0].title,url:items[0].url}:null};}),
  testProvider("tavily",Boolean(env.TAVILY_API_KEY),async()=>{const r=await fetch("https://api.tavily.com/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({api_key:env.TAVILY_API_KEY,query,max_results:3,search_depth:"basic"}),signal:timeout(8000)});const d=await r.json().catch(()=>({}));if(!r.ok)return {ok:false,message:"Tavily returned HTTP "+r.status+"; verify API key and plan."};const items=d.results||[];return {ok:items.length>0,count:items.length,example:items[0]?{title:items[0].title,url:items[0].url}:null,message:items.length?"":"No search results returned."};})
  ]);
