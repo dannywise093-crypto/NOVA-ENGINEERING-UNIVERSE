@@ -1326,3 +1326,33 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
   }
 }
 
+/* Micro-size sidebar menu toggle: strict dimensions and icon sizing */
+@media (max-width: 760px) {
+  button.mobile-sidebar#mobile-sidebar {
+    box-sizing: border-box !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+  }
+  button.mobile-sidebar#mobile-sidebar i {
+    display: block !important;
+    width: 10px !important;
+    height: 10px !important;
+    font-size: 10px !important;
+    line-height: 10px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
