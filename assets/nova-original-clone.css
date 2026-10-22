@@ -1108,3 +1108,28 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
 .nova-web-access input[type=checkbox]::after{content:""!important;position:absolute!important;left:4px!important;top:4px!important;width:22px!important;height:22px!important;border-radius:50%!important;background:#e7d5ff!important}
 .nova-web-access input[type=checkbox]:checked::after{transform:translateX(20px)!important}
 @media(max-width:760px){body{padding:10px!important}.row{height:calc(100dvh - 20px)!important;gap:0!important}.conversations{min-width:0!important;width:min(84vw,300px)!important;max-width:300px!important}.conversation{width:100%!important;gap:10px!important}.conversation .user-input,.input-box{height:76px!important;min-height:76px!important;max-height:76px!important}.conversation .user-input{flex-basis:76px!important}.conversation .user-input textarea{height:58px!important;min-height:58px!important;max-height:58px!important}.buttons.nova-reference-controls{gap:8px!important}.nova-web-access input[type=checkbox]{width:44px!important;height:28px!important;flex-basis:44px!important}.nova-web-access input[type=checkbox]::after{width:18px!important;height:18px!important}.nova-web-access input[type=checkbox]:checked::after{transform:translateX(16px)!important}}
+
+/* Mobile parity: retain the reference palette instead of the legacy gray clone theme */
+@media(max-width:760px){
+ html,body{background:#09060f!important;color:#e9ddf7!important}
+ body{padding:10px!important;overflow:hidden!important}
+ .row{height:calc(100dvh - 20px)!important;gap:0!important;background:transparent!important}
+ .conversation{background:transparent!important;padding:0!important}
+ .conversation #messages{background:radial-gradient(ellipse at 60% 40%,#1c0d28 0%,#100817 58%,#0b0710 100%)!important;border:1px solid rgba(195,158,225,.18)!important;border-radius:10px!important;padding:12px!important}
+ .clone-welcome{display:none!important}
+ .conversation .user-input{background:transparent!important;padding:0!important;flex:0 0 76px!important}
+ .input-box{background:rgba(18,11,25,.88)!important;border:1px solid rgba(195,158,225,.2)!important;border-radius:10px!important;padding:8px 42px 8px 12px!important}
+ .conversation .user-input textarea{background:transparent!important;color:#e9ddf7!important;font-size:16px!important}
+ .conversation .user-input textarea::placeholder{color:#b7a7c7!important}
+ #send-button{color:#e4caff!important;background:transparent!important}
+ .buttons.nova-reference-controls{background:transparent!important;border:0!important;gap:8px!important;overflow-x:auto!important;overflow-y:hidden!important;padding:0 2px!important}
+ .nova-web-access{flex:0 0 auto!important}
+ .nova-web-access span{color:#e9ddf7!important;font-size:12px!important}
+ .nova-reference-controls select{background:#100b17!important;border:1px solid rgba(195,158,225,.2)!important;color:#e9ddf7!important;font-size:13px!important}
+ #nova-model{width:140px!important;min-width:140px!important}
+ #nova-mode{width:82px!important;min-width:82px!important}
+ .mobile-sidebar{top:12px!important;left:12px!important;width:42px!important;height:42px!important;align-items:center!important;justify-content:center!important;border:1px solid #614779!important;border-radius:10px!important;background:#20112d!important;color:#e9ddf7!important}
+ .conversations{background:#0b0711!important;border:1px solid rgba(195,158,225,.2)!important;padding:20px!important}
+ .conversations .info{color:#e9ddf7!important;border:1px dashed #9d7cb8!important;border-radius:9px!important}
+ .conversations button{color:#e9ddf7!important;border-color:#9d7cb8!important;background:transparent!important}
+}
