@@ -1286,3 +1286,25 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
  #messages .message{padding:10px 4px!important}
  #messages .message > .content,#messages .message > .content p{font-size:13px!important;line-height:1.65!important}
 }
+
+/* Compact mobile sidebar toggle */
+@media (max-width: 760px) {
+  .mobile-sidebar {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border-radius: 7px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .mobile-sidebar i {
+    font-size: 14px !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+  }
+}
+
