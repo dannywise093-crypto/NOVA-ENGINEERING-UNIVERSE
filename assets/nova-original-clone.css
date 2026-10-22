@@ -1525,3 +1525,19 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
   .conversation .user-input textarea#message-input { font-size: 12px !important; }
 }
 
+/* Correct auto-growing composer: comfortable single line, expands with wrapped text */
+.conversation .user-input { flex: 0 0 auto !important; height:auto!important; min-height:0!important; max-height:none!important; }
+.conversation .user-input .input-box {
+  height:auto!important; min-height:40px!important; max-height:162px!important;
+  padding:4px 38px 4px 10px!important; overflow:hidden!important;
+  display:flex!important; align-items:center!important; box-sizing:border-box!important;
+}
+.conversation .user-input textarea#message-input {
+  box-sizing:border-box!important; width:100%!important;
+  height:32px; min-height:32px!important; max-height:140px!important;
+  padding:8px 0!important; margin:0!important; resize:none!important;
+  overflow-y:hidden; align-self:center!important;
+  font-size:12px!important; line-height:16px!important;
+}
+.conversation .user-input #send-button { top:50%!important; transform:translateY(-50%)!important; }
+
