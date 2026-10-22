@@ -1196,3 +1196,72 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
  #messages .message .content,#messages .message .message-content,#messages .message .markdown,#messages .message .markdown-body,
  #messages .message p,#messages .message li{font-size:13px!important;line-height:1.65!important}
 }
+
+
+/* Correct message row geometry: avatar occupies its own fixed flex column */
+#messages .message{
+ display:flex!important;
+ flex-direction:row!important;
+ align-items:flex-start!important;
+ justify-content:flex-start!important;
+ gap:12px!important;
+ width:100%!important;
+ box-sizing:border-box!important;
+ position:relative!important;
+ background:transparent!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+ padding:12px 18px!important;
+}
+#messages .message > .user{
+ display:flex!important;
+ align-items:flex-start!important;
+ justify-content:center!important;
+ position:static!important;
+ float:none!important;
+ flex:0 0 28px!important;
+ width:28px!important;
+ min-width:28px!important;
+ max-width:28px!important;
+ height:28px!important;
+ margin:0!important;
+ padding:0!important;
+}
+#messages .message > .user > div,
+#messages .message > .user > img{
+ display:grid!important;
+ position:static!important;
+ float:none!important;
+ flex:0 0 28px!important;
+ width:28px!important;
+ min-width:28px!important;
+ max-width:28px!important;
+ height:28px!important;
+ margin:0!important;
+}
+#messages .message > .content{
+ display:block!important;
+ position:static!important;
+ float:none!important;
+ flex:1 1 0%!important;
+ width:auto!important;
+ min-width:0!important;
+ max-width:none!important;
+ margin:0!important;
+ padding:0!important;
+ background:transparent!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+ color:#e5deeb!important;
+ font-size:14px!important;
+ line-height:1.65!important;
+ overflow-wrap:anywhere!important;
+}
+#messages .message > .content > p{margin:0 0 8px!important;font-size:14px!important;line-height:1.65!important}
+@media(max-width:760px){
+ #messages .message{gap:10px!important;padding:10px 4px!important}
+ #messages .message > .user,#messages .message > .user > div,#messages .message > .user > img{flex-basis:26px!important;width:26px!important;min-width:26px!important;max-width:26px!important;height:26px!important}
+ #messages .message > .content,#messages .message > .content > p{font-size:13px!important;line-height:1.65!important}
+}
