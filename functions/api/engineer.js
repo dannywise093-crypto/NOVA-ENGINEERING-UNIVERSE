@@ -26,24 +26,44 @@ function decodeHtml(s) {
   return String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
 }
 async function liveWebSearch(query) {
-  const response = await fetch("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query.slice(0, 500)), {
-    headers: { "user-agent": "Mozilla/5.0 (compatible; NOVAEngineeringResearch/1.0)", "accept": "text/html" },
-    signal: AbortSignal.timeout(9000)
-  });
-  if (!response.ok) throw new Error("Web search returned HTTP " + response.status);
-  const html = await response.text();
-  const results = [];
-  const re = /<div class="result__body">[\s\S]*?<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?(?:<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>|<div[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/div>)/gi;
-  let m;
-  while ((m = re.exec(html)) && results.length < 6) {
-    let url = decodeHtml(m[1]);
-    const wrapped = url.match(/[?&]uddg=([^&]+)/);
-    if (wrapped) { try { url = decodeURIComponent(wrapped[1]); } catch {} }
-    const title = decodeHtml(m[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ")).trim();
-    const snippet = decodeHtml((m[3] || m[4] || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ")).trim();
-    if (/^https?:\/\//i.test(url) && title && !results.some(r => r.url === url)) results.push({ title, url, snippet });
+  const headers = {
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "accept-language": "en-US,en;q=0.9",
+    "referer": "https://duckduckgo.com/",
+    "sec-fetch-dest": "document", "sec-fetch-mode": "navigate", "sec-fetch-site": "same-site"
+  };
+  const endpoints = [
+    "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query.slice(0, 500)),
+    "https://lite.duckduckgo.com/lite/?q=" + encodeURIComponent(query.slice(0, 500))
+  ];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, { headers, redirect: "follow", signal: AbortSignal.timeout(8000) });
+      const html = await response.text();
+      if (!response.ok || response.status === 202 || /challenge-form|anomaly-modal|captcha|select all squares/i.test(html)) continue;
+      const results = [];
+      const patterns = [
+        /<a\\b([^>]*?)class=["'][^"']*result__a[^"']*["']([^>]*)>([\\s\\S]*?)<\\/a>/gi,
+        /<a\\b([^>]*?)class=["'][^"']*result-link[^"']*["']([^>]*)>([\\s\\S]*?)<\\/a>/gi
+      ];
+      for (const pattern of patterns) {
+        let m;
+        while ((m = pattern.exec(html)) && results.length < 6) {
+          const attrs = (m[1] || "") + (m[2] || "");
+          let url = (attrs.match(/href=["']([^"']+)["']/i) || [])[1] || "";
+          const title = decodeHtml(m[3].replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ")).trim();
+          if (url.startsWith("//")) url = "https:" + url;
+          const wrapped = url.match(/[?&](?:uddg|u)=([^&]+)/i);
+          if (wrapped) { try { url = decodeURIComponent(wrapped[1]); } catch {} }
+          if (/^https?:\\/\\//i.test(url) && title && !results.some(r => r.url === url)) results.push({ title, url, snippet: "" });
+        }
+        if (results.length) break;
+      }
+      if (results.length) return results;
+    } catch { /* try the keyless HTML fallback */ }
   }
-  return results;
+  return [];
 }
 function formatSearchContext(results) {
   if (!results.length) return "";
