@@ -20,6 +20,7 @@ const configs={
 'biomedical-ai':['Biomedical Engineering AI','Biomedical devices, biomechanics and healthcare engineering concepts.','biomedical','engineering'],
 'software-ai':['Software Engineering AI','Software architecture, coding, debugging and engineering tools.','software','engineering']};
 const cfg=configs[assistantId]||configs['ask-engineering-ai'];
+if(window.hljs&&window.CopyButtonPlugin&&!window.__novaHljsCopyPlugin){window.hljs.addPlugin(new window.CopyButtonPlugin());window.__novaHljsCopyPlugin=true;}
 document.title=cfg[0]+' | NOVA';$('welcome-title').textContent='How can I help you today?';$('welcome-purpose').textContent=cfg[1];$('assistant-label').textContent=cfg[0];$('message-input').placeholder='Message '+cfg[0]+'…';
 const key='nova-original-clone-v1-'+assistantId;let chats=[],active=0,busy=false;
 function load(){try{const v=JSON.parse(localStorage.getItem(key)||'null');if(v&&Array.isArray(v.chats)){chats=v.chats;active=v.active||0}}catch{}if(!chats.length)chats=[{title:'New conversation',messages:[]}];active=Math.max(0,Math.min(active,chats.length-1));save()}
