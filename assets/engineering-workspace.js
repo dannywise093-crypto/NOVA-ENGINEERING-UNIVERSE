@@ -8,7 +8,7 @@
   if(save)try{localStorage.setItem('eu-display-mode',selected)}catch{}
  };
  const mount=()=>{
-  const nav=document.querySelector('header .nav,header .wrap.nav,header .wrap');
+  const nav=document.querySelector('header .nav,header .wrap.nav,header .wrap,header nav,header.top');
   if(!nav||document.querySelector('.eu-modebar'))return;
   const bar=document.createElement('div');bar.className='eu-modebar';bar.setAttribute('role','group');bar.setAttribute('aria-label','Workspace layout');
   const label=document.createElement('span');label.className='eu-modebar-label';label.textContent='Layout';bar.append(label);
