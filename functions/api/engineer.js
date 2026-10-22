@@ -37,9 +37,11 @@ async function liveWebSearch(query, env) {
       });
       if (response.ok) {
         const data = await response.json();
-        const results = (data.results || []).filter(r => typeof r.url === "string" && r.url.startsWith("http://") || (typeof r.url === "string" && r.url.startsWith("https://"))).map(r => ({
+        const results = (data.results || []).filter(r => typeof r.url === "string" && /^https?:\\/\\//i.test(r.url)).map(r => ({
           title: String(r.title || "Web search result").slice(0, 200), url: r.url,
-          snippet: String(r.content || "").slice(0, 700), provider: "Tavily"
+          snippet: String(r.content || "").slice(0, 900),
+          publishedDate: typeof r.published_date === "string" ? r.published_date.slice(0, 40) : "",
+          provider: "Tavily"
         })).filter((r, i, a) => a.findIndex(x => x.url === r.url) === i).slice(0, 6);
         if (results.length) return results;
       }
@@ -107,8 +109,8 @@ async function liveWebSearch(query, env) {
 function formatSearchContext(results) {
   if (!results.length) return "";
   return "\n\nLIVE WEB SEARCH RESULTS (current search; snippets are leads, not guaranteed facts):\n" +
-    results.map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + "\nSnippet: " + r.snippet + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
-    "\n\nUse these live search results as evidence, not as unquestionable truth. Cite relevant sources with clickable links using exact URLs, distinguish sourced facts from inference, and say when results are insufficient or conflicting. Prefer primary sources, official documentation, standards bodies, and peer-reviewed papers where available. Never invent citations or claim a search succeeded if no results were retrieved. DuckDuckGo Instant Answer results are limited summaries, not a complete web-search listing.";
+    results.map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + (r.publishedDate ? "\nPublished date (search provider metadata; verify on article page): " + r.publishedDate : "") + "\nSnippet: " + r.snippet + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
+    "\n\nUse these live search results as evidence, not as unquestionable truth. Cite relevant sources with clickable links using exact URLs, distinguish sourced facts from inference, and say when results are insufficient or conflicting. For research requests, prioritize journal publisher pages, DOI landing pages, PubMed, or institutional repositories; report publication dates only when supplied in search metadata or visible on the source page; label online-first versus issue publication dates when distinguishable. Exclude irrelevant shopping, profile, regulation, and general-news pages when the user asks for peer-reviewed research. Summarize each paper’s question, method, main finding, and limitation using only supported details. Never invent citations, authors, dates, DOI values, peer-review status, or claim a search succeeded if no results were retrieved. DuckDuckGo Instant Answer results are limited summaries, not a complete web-search listing.";
 }
 
 async function askGroq(env, profile, userMessages) {
@@ -161,7 +163,9 @@ Create a useful preliminary concept from the user's request. Supported primitive
   let conversation = Array.isArray(body.messages) ? body.messages : [{ role: "user", content: task }];
   conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-24).map(m => ({ role: m.role, content: m.content.slice(0, 12000) }));
   if (!conversation.length || conversation[conversation.length - 1].role !== "user") conversation.push({ role: "user", content: task });
-  const searchQuery = conversation.filter(m => m.role === "user").slice(-4).map(m => m.content).join("\\n").slice(-1800);
+  const latestUserQuery = [...conversation].reverse().find(m => m.role === "user")?.content || task;
+  const isResearchQuery = /\\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\\b/i.test(latestUserQuery);
+  const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " recent peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
   let searchResults = [];
   if (needsLiveSearch(searchQuery)) {
     try { searchResults = await liveWebSearch(searchQuery, env); } catch { /* Search failure should not block ordinary AI responses. */ }
@@ -169,7 +173,7 @@ Create a useful preliminary concept from the user's request. Supported primitive
   if (searchResults.length) conversation[conversation.length - 1].content += formatSearchContext(searchResults);
   if (wantsScene) conversation[conversation.length - 1].content += sceneInstructions;
   const result = await askGroq(env, profile, conversation);
-  if (searchResults.length) result.sources = searchResults.map(({title,url}) => ({title,url}));
+  if (searchResults.length) result.sources = searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"}));
   if (result.error) return json(result, 502);
   if (wantsScene) {
     const match = result.answer.match(/<eu-scene>\s*([\s\S]*?)\s*<\/eu-scene>/i);
