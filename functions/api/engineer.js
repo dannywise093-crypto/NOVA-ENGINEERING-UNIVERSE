@@ -68,7 +68,7 @@ Create a useful preliminary concept from the user's request. Supported primitive
   const result = await askGroq(env, profile, task + sceneInstructions);
   if (result.error) return json(result, 502);
   if (wantsScene) {
-    const match = result.answer.match(/<eu-scene>\\s*([\\s\\S]*?)\\s*<\\/eu-scene>/i);
+    const match = result.answer.match(/<eu-scene>\s*([\s\S]*?)\s*<\/eu-scene>/i);
     if (match) {
       try {
         const raw = JSON.parse(match[1]);
