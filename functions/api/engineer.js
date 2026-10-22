@@ -20,12 +20,31 @@ const profiles = {
 
 
 function needsLiveSearch(text) {
-  return /\b(latest|current|currently|today|right now|real[- ]time|recent|newest|up[- ]to[- ]date|202[5-9]|20[3-9][0-9]|documentation|datasheet|technical spec|specification|standard(?:s)?|code requirement|regulation|compliance|research|paper|journal|study|benchmark|release notes|version|manufacturer|product comparison|market price|cost estimate|source|citation|reference|web search|browse|internet|news)\b/i.test(text);
+  return /\b(live research|live search|search the web|web search|browse the web|look up|latest|current|currently|today|right now|real[- ]time|recent|newest|up[- ]to[- ]date|202[5-9]|20[3-9][0-9]|documentation|datasheet|technical spec|specification|standard(?:s)?|code requirement|regulation|compliance|research|paper|journal|study|benchmark|release notes|version|manufacturer|product comparison|market price|cost estimate|source|citation|reference|browse|internet|news)\b/i.test(text);
 }
 function decodeHtml(s) {
   return String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
 }
-async function liveWebSearch(query) {
+async function liveWebSearch(query, env) {
+  // Prefer configured Tavily for real web results; fall back to keyless DuckDuckGo.
+  if (env.TAVILY_API_KEY) {
+    try {
+      const response = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ api_key: env.TAVILY_API_KEY, query: query.slice(0, 1800), max_results: 6, search_depth: "basic", include_answer: false }),
+        signal: AbortSignal.timeout(9000)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const results = (data.results || []).filter(r => typeof r.url === "string" && /^https?:\\/\\//i.test(r.url)).map(r => ({
+          title: String(r.title || "Web search result").slice(0, 200), url: r.url,
+          snippet: String(r.content || "").slice(0, 700), provider: "Tavily"
+        })).filter((r, i, a) => a.findIndex(x => x.url === r.url) === i).slice(0, 6);
+        if (results.length) return results;
+      }
+    } catch { /* Fall back to keyless DuckDuckGo. */ }
+  }
   // Official DuckDuckGo Instant Answer API: free/keyless, but not a full web search API.
   try {
     const apiUrl = new URL("https://api.duckduckgo.com/");
@@ -89,7 +108,7 @@ function formatSearchContext(results) {
   if (!results.length) return "";
   return "\n\nLIVE WEB SEARCH RESULTS (current search; snippets are leads, not guaranteed facts):\n" +
     results.map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + "\nSnippet: " + r.snippet + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
-    "\n\nGround current claims in these sources. Cite relevant sources using their exact URLs, distinguish facts from inference, and say when results are insufficient or conflicting. DuckDuckGo Instant Answer results are limited summaries, not a complete web-search listing; attribute DuckDuckGo and the underlying source when using them.";
+    "\n\nUse these live search results as evidence, not as unquestionable truth. Cite relevant sources with clickable links using exact URLs, distinguish sourced facts from inference, and say when results are insufficient or conflicting. Prefer primary sources, official documentation, standards bodies, and peer-reviewed papers where available. Never invent citations or claim a search succeeded if no results were retrieved. DuckDuckGo Instant Answer results are limited summaries, not a complete web-search listing.";
 }
 
 async function askGroq(env, profile, userMessages) {
@@ -145,7 +164,7 @@ Create a useful preliminary concept from the user's request. Supported primitive
   const searchQuery = conversation.filter(m => m.role === "user").slice(-4).map(m => m.content).join("\\n").slice(-1800);
   let searchResults = [];
   if (needsLiveSearch(searchQuery)) {
-    try { searchResults = await liveWebSearch(searchQuery); } catch { /* Search failure should not block ordinary AI responses. */ }
+    try { searchResults = await liveWebSearch(searchQuery, env); } catch { /* Search failure should not block ordinary AI responses. */ }
   }
   if (searchResults.length) conversation[conversation.length - 1].content += formatSearchContext(searchResults);
   if (wantsScene) conversation[conversation.length - 1].content += sceneInstructions;
