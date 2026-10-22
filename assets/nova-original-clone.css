@@ -1356,3 +1356,40 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
   }
 }
 
+/* Borderless micro menu toggle: show only the compact hamburger icon */
+@media (max-width: 760px) {
+  button.mobile-sidebar#mobile-sidebar {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    color: #e9ddf7 !important;
+  }
+  button.mobile-sidebar#mobile-sidebar i {
+    width: 10px !important;
+    height: 10px !important;
+    font-size: 10px !important;
+    line-height: 10px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  button.mobile-sidebar#mobile-sidebar:focus,
+  button.mobile-sidebar#mobile-sidebar:focus-visible,
+  button.mobile-sidebar#mobile-sidebar:hover,
+  button.mobile-sidebar#mobile-sidebar:active {
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+}
+
