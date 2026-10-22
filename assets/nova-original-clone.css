@@ -1560,3 +1560,24 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
 @media (max-width: 760px) {
   .conversation .user-input .input-box { min-height: 34px !important; }
 }
+
+/* Final auto-grow behavior: compact at rest, smooth growth for multiline messages */
+.conversation .user-input .input-box {
+  min-height: 34px !important;
+  max-height: 126px !important;
+  height: auto !important;
+  align-items: center !important;
+  transition: height 120ms ease !important;
+}
+.conversation .user-input textarea#message-input {
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 120px !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden;
+  transition: height 120ms ease !important;
+}
+.conversation .user-input #send-button {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
