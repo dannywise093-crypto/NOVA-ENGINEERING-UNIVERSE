@@ -171,7 +171,8 @@ Create a useful preliminary concept from the user's request. Supported primitive
   let conversation = Array.isArray(body.messages) ? body.messages : [{ role: "user", content: task }];
   conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-8).map(m => ({ role: m.role, content: m.content.slice(-3500) }));
   if (!conversation.length || conversation[conversation.length - 1].role !== "user") conversation.push({ role: "user", content: task });
-  const latestUserQueryRaw = [...conversation].reverse().find(m => m.role === "user")?.content || task;
+  const meaningfulUserMessage = [...conversation].reverse().find(m => m.role === "user" && m.content.trim().length > 20 && !/^(continue|retry|try again|go on|proceed)$/i.test(m.content.trim()));
+  const latestUserQueryRaw = meaningfulUserMessage?.content || task;
   const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
   const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " recent peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
