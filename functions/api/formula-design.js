@@ -29,7 +29,7 @@ async function liveWebSearch(query, env) {
       });
       if (response.ok) {
         const data = await response.json();
-        const results = (data.results || []).filter(r => typeof r.url === "string" && /^https?:\\/\\//i.test(r.url)).map(r => ({
+        const results = (data.results || []).filter(r => typeof r.url === "string" && /^https?:\/\//i.test(r.url)).map(r => ({
           title: String(r.title || "Web search result").slice(0, 200), url: r.url,
           snippet: String(r.content || "").slice(0, 900),
           publishedDate: typeof r.published_date === "string" ? r.published_date.slice(0, 40) : "",
@@ -109,7 +109,7 @@ function formatSearchContext(results) {
   conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-24).map(m => ({ role: m.role, content: m.content.slice(0, 12000) }));
   if (!conversation.length || conversation[conversation.length - 1].role !== "user") conversation.push({ role: "user", content: task });
   const latestUserQuery = [...conversation].reverse().find(m => m.role === "user")?.content || task;
-  const isResearchQuery = /\\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\\b/i.test(latestUserQuery);
+  const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
   const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " recent peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
   let searchResults = [];
   if (needsLiveSearch(searchQuery)) {
