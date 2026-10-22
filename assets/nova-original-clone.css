@@ -1584,7 +1584,7 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
 
 
 /* ChatGPT-style searchable recent conversation sidebar */
-.conversations .top{min-height:0;flex:1 1 auto;gap:12px!important}
+.conversations .top{min-height:0;flex:1 1 auto;gap:12px!important}.history-search-wrap{position:static!important;text-indent:0!important;overflow:visible!important}
 .history-search-wrap{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:10px!important;width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;padding:0 11px!important;border:1px solid #454550!important;border-radius:8px!important;background:#292a32!important;color:#b7b7c5!important;cursor:text!important;text-indent:0!important;overflow:hidden!important}
 .history-search-wrap i{position:static!important;flex:0 0 auto!important;color:#b7b7c5!important;font-size:13px!important}
 .history-search-wrap input#history-search{position:static!important;display:block!important;flex:1 1 auto!important;min-width:0!important;width:100%!important;height:34px!important;padding:0!important;margin:0!important;border:0!important;outline:0!important;background:transparent!important;color:#ececf1!important;font-size:13px!important}
