@@ -18,7 +18,41 @@ const profiles = {
   software: { key: 7, name: "Engineering Software AI", prompt: "You are Engineering Software AI. Focus on engineering programming, simulation, numerical methods, automation, and software tools." }
 };
 
-async function askGroq(env, profile, userText) {
+
+function needsLiveSearch(text) {
+  return /\b(latest|current|currently|today|right now|real[- ]time|recent|newest|up[- ]to[- ]date|202[5-9]|20[3-9][0-9]|documentation|datasheet|technical spec|specification|standard(?:s)?|code requirement|regulation|compliance|research|paper|journal|study|benchmark|release notes|version|manufacturer|product comparison|market price|cost estimate|source|citation|reference|web search|browse|internet|news)\b/i.test(text);
+}
+function decodeHtml(s) {
+  return String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
+}
+async function liveWebSearch(query) {
+  const response = await fetch("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query.slice(0, 500)), {
+    headers: { "user-agent": "Mozilla/5.0 (compatible; NOVAEngineeringResearch/1.0)", "accept": "text/html" },
+    signal: AbortSignal.timeout(9000)
+  });
+  if (!response.ok) throw new Error("Web search returned HTTP " + response.status);
+  const html = await response.text();
+  const results = [];
+  const re = /<div class="result__body">[\s\S]*?<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?(?:<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>|<div[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/div>)/gi;
+  let m;
+  while ((m = re.exec(html)) && results.length < 6) {
+    let url = decodeHtml(m[1]);
+    const wrapped = url.match(/[?&]uddg=([^&]+)/);
+    if (wrapped) { try { url = decodeURIComponent(wrapped[1]); } catch {} }
+    const title = decodeHtml(m[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ")).trim();
+    const snippet = decodeHtml((m[3] || m[4] || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ")).trim();
+    if (/^https?:\/\//i.test(url) && title && !results.some(r => r.url === url)) results.push({ title, url, snippet });
+  }
+  return results;
+}
+function formatSearchContext(results) {
+  if (!results.length) return "";
+  return "\n\nLIVE WEB SEARCH RESULTS (current search; snippets are leads, not guaranteed facts):\n" +
+    results.map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + "\nSnippet: " + r.snippet).join("\n\n") +
+    "\n\nGround current claims in these sources. Cite relevant sources using their exact URLs, distinguish facts from inference, and say when results are insufficient or conflicting.";
+}
+
+async function askGroq(env, profile, userMessages) {
   const keys = [profile.key, 1, 2, 3, 4, 5, 6, 7].filter((n, i, a) => a.indexOf(n) === i)
     .map(n => env["GROQ_API_KEY_" + n]).filter(Boolean);
   if (!keys.length) return { error: "AI is not configured: production Groq secrets are missing." };
@@ -33,7 +67,7 @@ async function askGroq(env, profile, userText) {
           temperature: 0.25,
           messages: [
             { role: "system", content: profile.prompt + " Apply a rigorous engineering quality protocol: do not claim to be a licensed human professional or guarantee 100% correctness. First identify the user's goal, application, operating environment, loads, performance targets, constraints, and applicable jurisdiction/standards. If critical inputs are missing, ask focused clarifying questions or give a clearly labeled preliminary answer with explicit assumptions—never silently invent specifications. Separate verified facts, estimates, assumptions, and recommendations. Show equations, symbol definitions, SI units, substitutions, dimensional checks, tolerances, uncertainty, and independent cross-checks when relevant. For build/materials requests, provide a bill of materials table with item, required specification/grade, quantity or sizing method, rationale, applicable standard, sourcing/inspection requirements, and unresolved data; do not invent exact quantities, grades, part numbers, or certifications without enough design inputs. Include manufacturing/assembly steps, tools, testing/acceptance criteria, failure modes, hazards, maintenance, and disposal where relevant. Cite standards and sources only when confident they exist; never fabricate citations, test results, simulations, or calculations. For safety-critical systems, legal compliance, medical devices, pressure systems, vehicles, structures, aircraft, mains electricity, or hazardous processes, clearly state that outputs are preliminary and require review by a qualified, appropriately licensed engineer and applicable code compliance before construction or use. Be candid about uncertainty and say when evidence or data is insufficient." },
-            { role: "user", content: userText }
+            ...userMessages.map(m => ({ role: m.role, content: m.content }))
           ]
         })
       });
@@ -65,7 +99,18 @@ After your engineering explanation, include exactly one machine-readable block u
 {"units":"mm","objects":[{"type":"box","dimensions":{"width":40,"depth":30,"height":20},"position":[0,0,0],"rotation":[0,0,0],"color":"#49c9f5"}]}
 </eu-scene>
 Create a useful preliminary concept from the user's request. Supported primitive types are box, cylinder, sphere, cone, torus. Include 1-30 objects. All dimensions must be finite positive millimetres; positions and rotations are finite numbers in millimetres/degrees. For cylinders/cones, width and depth represent diameter; height is axial length. Use simple primitives only; do not claim complex surfaces, holes, fillets, simulation, or manufacturing-ready geometry unless represented. If essential dimensions are missing, clearly label reasonable illustrative assumptions in the explanation and keep geometry conceptual. Output valid JSON inside the tags, no markdown fences. Never place code or other text inside the tags.` : "";
-  const result = await askGroq(env, profile, task + sceneInstructions);
+  let conversation = Array.isArray(body.messages) ? body.messages : [{ role: "user", content: task }];
+  conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-24).map(m => ({ role: m.role, content: m.content.slice(0, 12000) }));
+  if (!conversation.length || conversation[conversation.length - 1].role !== "user") conversation.push({ role: "user", content: task });
+  const searchQuery = conversation.filter(m => m.role === "user").slice(-4).map(m => m.content).join("\\n").slice(-1800);
+  let searchResults = [];
+  if (needsLiveSearch(searchQuery)) {
+    try { searchResults = await liveWebSearch(searchQuery); } catch { /* Search failure should not block ordinary AI responses. */ }
+  }
+  if (searchResults.length) conversation[conversation.length - 1].content += formatSearchContext(searchResults);
+  if (wantsScene) conversation[conversation.length - 1].content += sceneInstructions;
+  const result = await askGroq(env, profile, conversation);
+  if (searchResults.length) result.sources = searchResults.map(({title,url}) => ({title,url}));
   if (result.error) return json(result, 502);
   if (wantsScene) {
     const match = result.answer.match(/<eu-scene>\s*([\s\S]*?)\s*<\/eu-scene>/i);
