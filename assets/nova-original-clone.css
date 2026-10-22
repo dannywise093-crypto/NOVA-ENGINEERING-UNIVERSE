@@ -1029,3 +1029,65 @@ a:-webkit-any-link{color:#d0a9ff}
 }
 @media(min-width:761px){.mobile-sidebar{display:none!important}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
+
+
+/* Pixel-matched reference layout: keep NOVA functionality, match supplied screenshot */
+:root{--colour-1:#09070d;--colour-2:#e9ddfa;--colour-3:#f1eafa;--colour-4:#fff;--colour-5:#100b18;--colour-6:#1a1022;--accent:#cda7ff;--blur-bg:rgba(17,10,24,.76);--blur-border:#302438;--user-input:#1a1023;--conversations:#c7a1f2;--section-gap:26px;--border-radius-1:10px}
+html,body{width:100%;height:100%;min-height:0;overflow:hidden}
+body{padding:26px;background:radial-gradient(ellipse at 69% 45%,#1d0e29 0%,#100817 53%,#08070b 100%);color:#eee4fa}
+.row{height:calc(100dvh - 52px);min-height:0;gap:26px}
+.box{background:rgba(17,10,24,.44);border:1px solid #302438;border-radius:10px;backdrop-filter:none;-webkit-backdrop-filter:none}
+.conversations{flex:0 0 272px;width:272px;max-width:272px;padding:26px;gap:14px}
+.conversations .top{flex:1;min-height:0;gap:16px}
+.new_convo{width:100%;min-height:38px;justify-content:flex-start;gap:16px;padding:8px 12px;border:1px dashed #cba5fa;border-radius:10px}
+.new_convo i,.bottom_buttons button i{color:#cba5fa}
+.new_convo span{font-size:14px;color:#eee4fa}
+.conversations .bottom_buttons{gap:10px}
+.conversations .bottom_buttons button{min-height:38px;border:1px solid #cba5fa;padding:8px 12px;gap:14px;border-radius:9px}
+.conversations .info{display:block;border:1px dashed #cba5fa;border-radius:9px;padding:10px 16px;color:#e6d9f4;font-size:13px;line-height:1.25}
+.conversations .info #clone-title{display:none}
+.conversations .info a{display:none}
+.conversation{height:100%;min-height:0;flex:1;gap:16px;overflow:hidden}
+.conversation #messages{flex:1;min-height:0;height:auto;padding:0;overflow:auto;background:rgba(20,10,28,.4);border-color:#302438}
+.clone-welcome{display:none!important}
+.message{padding:24px;gap:16px;border-bottom:1px solid #ffffff08}
+.message .content{flex:1}
+.conversation .user-input{flex:0 0 86px;max-height:none}
+.input-box{height:86px;min-height:86px;max-height:86px;padding:8px 14px;background:rgba(20,11,29,.65);border:1px solid #302438;border-radius:10px;gap:12px;align-items:center}
+.conversation .user-input textarea{height:68px;min-height:68px;max-height:68px;padding:12px 6px;color:#eee4fa;resize:none;font-size:15px}
+.conversation .user-input textarea::placeholder{color:#a996b8}
+#send-button{flex:0 0 32px;width:32px;height:32px;background:transparent;color:#e1caff;border:0;border-radius:8px}
+#send-button:hover{background:#30203b}
+#clone-status{display:none}
+.buttons.nova-reference-controls{min-height:36px;flex:0 0 36px;align-items:center;gap:16px;padding:0 4px;margin:0}
+.nova-web-access{display:flex;align-items:center;gap:16px;height:36px}
+.nova-web-access input[type=checkbox]{display:block;appearance:none;-webkit-appearance:none;width:52px;height:32px;flex:0 0 52px;border:1px solid #302438;border-radius:20px;background:#100b16;cursor:pointer}
+.nova-web-access input[type=checkbox]:after{content:"";display:block;position:absolute;left:4px;top:4px;width:22px;height:22px;border-radius:50%;background:#e7d5ff;transition:transform .15s}
+.nova-web-access input[type=checkbox]:checked:after{transform:translateX(20px)}
+.nova-web-access label{display:none}
+.nova-web-access span{color:#e9ddf7;font-size:14px;white-space:nowrap}
+.nova-reference-controls select{height:36px;min-width:92px;border:1px solid #302438;background:rgba(18,11,25,.8);border-radius:9px;color:#e9ddf7;padding:0 14px;font-size:13px}
+#nova-model{width:165px}#nova-mode{width:92px}
+.nova-assistant-label{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.mobile-sidebar{display:none!important}
+.hljs-copy-button{transform:none;top:8px;right:8px;width:auto;height:auto;min-height:30px;text-indent:0;background:#291b38;border-color:#614779;padding:5px 10px;font-size:12px;z-index:2}
+.hljs-copy-wrapper:hover .hljs-copy-button{transform:none}
+@media(max-width:760px){
+ body{padding:10px}
+ .row{height:calc(100dvh - 20px);gap:0}
+ .conversations{display:none;position:fixed;z-index:100001;inset:10px auto 10px 10px;width:min(84vw,300px);height:auto;background:#100b17;box-shadow:0 15px 50px #000b}
+ body.sidebar-open .conversations{display:flex}
+ body.sidebar-open:after{content:"";position:fixed;inset:0;background:#0009;z-index:100000}
+ .conversation{gap:10px}
+ .conversation #messages{padding:0 12px 12px}
+ .conversation .user-input{flex-basis:76px}
+ .input-box{height:76px;min-height:76px;max-height:76px}
+ .conversation .user-input textarea{height:58px;min-height:58px;max-height:58px;font-size:16px}
+ .buttons.nova-reference-controls{gap:8px;flex-wrap:nowrap;overflow-x:auto}
+ .nova-web-access{gap:7px}.nova-web-access span{font-size:12px}
+ .nova-web-access input[type=checkbox]{width:44px;flex-basis:44px;height:28px}
+ .nova-web-access input[type=checkbox]:after{width:18px;height:18px;top:4px;left:4px}
+ .nova-web-access input[type=checkbox]:checked:after{transform:translateX(16px)}
+ #nova-model{width:140px;min-width:140px}#nova-mode{width:82px;min-width:82px}
+ .mobile-sidebar{display:flex!important;position:fixed;z-index:100002;top:12px;left:12px}
+}
