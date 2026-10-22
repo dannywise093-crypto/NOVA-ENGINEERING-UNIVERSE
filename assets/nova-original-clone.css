@@ -1581,3 +1581,18 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
   top: 50% !important;
   transform: translateY(-50%) !important;
 }
+
+
+/* ChatGPT-style searchable recent conversation sidebar */
+.conversations .top{min-height:0;flex:1 1 auto;gap:12px!important}
+.history-search-wrap{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:10px!important;width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;padding:0 11px!important;border:1px solid #454550!important;border-radius:8px!important;background:#292a32!important;color:#b7b7c5!important;cursor:text!important;text-indent:0!important;overflow:hidden!important}
+.history-search-wrap i{position:static!important;flex:0 0 auto!important;color:#b7b7c5!important;font-size:13px!important}
+.history-search-wrap input#history-search{position:static!important;display:block!important;flex:1 1 auto!important;min-width:0!important;width:100%!important;height:34px!important;padding:0!important;margin:0!important;border:0!important;outline:0!important;background:transparent!important;color:#ececf1!important;font-size:13px!important}
+.history-search-wrap input#history-search::placeholder{color:#a4a4b2!important}
+#history{display:flex;flex-direction:column;gap:3px;margin-top:0!important;min-height:0;overflow-y:auto;overflow-x:hidden}
+#history .history-section-title{padding:10px 9px 6px;color:#a7a7b4;font-size:12px;font-weight:600;letter-spacing:.02em}
+#history .history-item{display:block!important;width:100%!important;min-width:0!important;padding:9px 10px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#e7e7ee!important;text-align:left!important;font-size:13px!important;line-height:1.4!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;cursor:pointer!important;transition:background .12s ease!important}
+#history .history-item:hover{background:#2f3039!important}
+#history .history-item.active{background:#343541!important;color:#fff!important}
+#history .history-empty{padding:9px 10px;color:#9999a8;font-size:12px;line-height:1.5}
+@media(max-width:760px){.history-search-wrap{height:40px!important;min-height:40px!important}#history .history-item{padding:11px 10px!important}}
