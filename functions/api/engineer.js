@@ -55,6 +55,44 @@ export async function onRequestPost({ request, env }) {
   const task = String(body.task || "").trim();
   if (!task) return json({ error: "Please enter an engineering question or task." }, 400);
   if (task.length > 12000) return json({ error: "Please keep the task under 12,000 characters." }, 413);
-  const result = await askGroq(env, profile, task);
-  return json(result, result.error ? 502 : 200);
+  const style = String(body.style || "design").toLowerCase();
+  const wantsScene = style === "scene" || style === "design";
+  const sceneInstructions = wantsScene ? `
+
+CAD SCENE OUTPUT REQUIREMENT:
+After your engineering explanation, include exactly one machine-readable block using this format:
+<eu-scene>
+{"units":"mm","objects":[{"type":"box","dimensions":{"width":40,"depth":30,"height":20},"position":[0,0,0],"rotation":[0,0,0],"color":"#49c9f5"}]}
+</eu-scene>
+Create a useful preliminary concept from the user's request. Supported primitive types are box, cylinder, sphere, cone, torus. Include 1-30 objects. All dimensions must be finite positive millimetres; positions and rotations are finite numbers in millimetres/degrees. For cylinders/cones, width and depth represent diameter; height is axial length. Use simple primitives only; do not claim complex surfaces, holes, fillets, simulation, or manufacturing-ready geometry unless represented. If essential dimensions are missing, clearly label reasonable illustrative assumptions in the explanation and keep geometry conceptual. Output valid JSON inside the tags, no markdown fences. Never place code or other text inside the tags.` : "";
+  const result = await askGroq(env, profile, task + sceneInstructions);
+  if (result.error) return json(result, 502);
+  if (wantsScene) {
+    const match = result.answer.match(/<eu-scene>\\s*([\\s\\S]*?)\\s*<\\/eu-scene>/i);
+    if (match) {
+      try {
+        const raw = JSON.parse(match[1]);
+        const allowed = new Set(["box", "cylinder", "sphere", "cone", "torus"]);
+        const objects = Array.isArray(raw.objects) ? raw.objects.slice(0, 30).map((item) => {
+          const type = String(item.type || "").toLowerCase();
+          if (!allowed.has(type)) throw new Error("Unsupported CAD primitive: " + type);
+          const d = item.dimensions || {};
+          const dimensions = { width: Number(d.width), depth: Number(d.depth), height: Number(d.height) };
+          if (!Object.values(dimensions).every(n => Number.isFinite(n) && n > 0 && n <= 1000000)) throw new Error("CAD dimensions must be finite positive millimetres.");
+          const position = Array.isArray(item.position) ? item.position.slice(0,3).map(Number) : [0,0,0];
+          const rotation = Array.isArray(item.rotation) ? item.rotation.slice(0,3).map(Number) : [0,0,0];
+          if (position.length !== 3 || rotation.length !== 3 || ![...position,...rotation].every(n => Number.isFinite(n) && Math.abs(n) <= 1000000)) throw new Error("CAD position and rotation values must be finite.");
+          return { type, dimensions, position, rotation, color: /^#[0-9a-f]{6}$/i.test(item.color || "") ? item.color : "#49c9f5" };
+        }) : [];
+        if (objects.length < 1) throw new Error("The AI did not provide any supported CAD objects.");
+        result.scene = { units: "mm", objects };
+        result.answer = result.answer.replace(match[0], "").trim();
+      } catch (error) {
+        result.scene_error = "AI explanation was returned, but its CAD scene could not be validated: " + error.message;
+      }
+    } else {
+      result.scene_error = "AI explanation was returned without a valid <eu-scene> block. Try asking for a simpler primitive-based concept.";
+    }
+  }
+  return json(result, 200);
 }
