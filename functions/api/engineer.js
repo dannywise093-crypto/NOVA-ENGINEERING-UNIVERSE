@@ -30,7 +30,7 @@ async function liveWebSearch(query) {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "accept-language": "en-US,en;q=0.9",
-    "referer": "https://duckduckgo.com/",
+    "referer": "https://html.duckduckgo.com/",
     "sec-fetch-dest": "document", "sec-fetch-mode": "navigate", "sec-fetch-site": "same-site"
   };
   const endpoints = [
@@ -43,22 +43,15 @@ async function liveWebSearch(query) {
       const html = await response.text();
       if (!response.ok || response.status === 202 || /challenge-form|anomaly-modal|captcha|select all squares/i.test(html)) continue;
       const results = [];
-      const patterns = [
-        /<a\\b([^>]*?)class=["'][^"']*result__a[^"']*["']([^>]*)>([\\s\\S]*?)<\\/a>/gi,
-        /<a\\b([^>]*?)class=["'][^"']*result-link[^"']*["']([^>]*)>([\\s\\S]*?)<\\/a>/gi
-      ];
-      for (const pattern of patterns) {
-        let m;
-        while ((m = pattern.exec(html)) && results.length < 6) {
-          const attrs = (m[1] || "") + (m[2] || "");
-          let url = (attrs.match(/href=["']([^"']+)["']/i) || [])[1] || "";
-          const title = decodeHtml(m[3].replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ")).trim();
-          if (url.startsWith("//")) url = "https:" + url;
-          const wrapped = url.match(/[?&](?:uddg|u)=([^&]+)/i);
-          if (wrapped) { try { url = decodeURIComponent(wrapped[1]); } catch {} }
-          if (/^https?:\\/\\//i.test(url) && title && !results.some(r => r.url === url)) results.push({ title, url, snippet: "" });
-        }
-        if (results.length) break;
+      const pattern = /<a\b[^>]*class=["'][^"']*(?:result__a|result-link)[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+      let m;
+      while ((m = pattern.exec(html)) && results.length < 6) {
+        let url = m[1] || "";
+        const title = decodeHtml(m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")).trim();
+        if (url.startsWith("//")) url = "https:" + url;
+        const wrapped = url.match(/[?&](?:uddg|u)=([^&]+)/i);
+        if (wrapped) { try { url = decodeURIComponent(wrapped[1]); } catch {} }
+        if (/^https?:\/\//i.test(url) && title && !results.some(r => r.url === url)) results.push({ title, url, snippet: "" });
       }
       if (results.length) return results;
     } catch { /* try the keyless HTML fallback */ }
