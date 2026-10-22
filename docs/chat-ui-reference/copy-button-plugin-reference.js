@@ -51,3 +51,6 @@ class CopyButtonPlugin {
     }.bind(this);
   }
 }
+
+// Expose the plugin for the shared NOVA chat script.
+window.CopyButtonPlugin = CopyButtonPlugin;
