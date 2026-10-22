@@ -77,9 +77,10 @@ module.exports = async function handler(req, res) {
     biomedical: "GROQ_API_KEY_7", software: "GROQ_API_KEY_7"
   };
   const keyVariable = body && body.assistant === "formula-design-ai" ? "GROQ_API_KEY_5" : keyVariableByDiscipline[discipline];
-  // Keep the assigned key primary; use the legacy shared key only as a migration fallback.
-  const key = process.env[keyVariable] || process.env.GROQ_API_KEY;
-  if (!key) return res.status(503).json({ error: keyVariable + " is not configured in the server's production environment. Add this variable for the selected engineering assistant (or configure GROQ_API_KEY as a shared fallback)." });
+  // Prefer the assigned key, then try other configured keys if a quota/transient failure occurs.
+  const keyCandidates = [keyVariable, ...Array.from({ length: 7 }, (_, i) => "GROQ_API_KEY_" + (i + 1)), "GROQ_API_KEY"]
+    .filter((name, index, all) => all.indexOf(name) === index && process.env[name]);
+  if (!keyCandidates.length) return res.status(503).json({ error: "No Groq API key is configured. Add GROQ_API_KEY_1 through GROQ_API_KEY_7 to the server environment." });
   if (task.length < 8) return res.status(400).json({ error: "Please provide a more detailed engineering task (at least 8 characters)." });
   if (task.length > 8000) return res.status(413).json({ error: "Task is too long. Keep it under 8,000 characters." });
   const [role, focus] = PROFILES[discipline];
@@ -99,10 +100,10 @@ module.exports = async function handler(req, res) {
     const endpoint = "https://api.groq.com/openai/v1/chat/completions";
     const primaryModel = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
     const fallbackModel = "llama-3.3-70b-versatile";
-    async function askGroq(model) {
+    async function askGroq(model, keyName) {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+        headers: { "Authorization": "Bearer " + process.env[keyName], "Content-Type": "application/json" },
         body: JSON.stringify({
           model,
           temperature: 0.2,
@@ -143,14 +144,24 @@ module.exports = async function handler(req, res) {
 
     // Give each provider attempt a bounded time so the UI does not wait forever.
     // Retry the fallback model on provider errors as well as empty responses.
-    let result = await askGroq(primaryModel);
-    if ((result.error || !result.answer) && primaryModel !== fallbackModel) {
-      console.warn("Primary Groq model failed or returned empty text; retrying fallback model", {
-        primaryModel,
-        status: result.status || null,
-        emptyAnswer: !result.error && !result.answer
+    let result = null;
+    const retryable = value => value && (value.error
+      ? value.status === 429 || value.status >= 500
+      : !value.answer);
+    for (const keyName of keyCandidates) {
+      result = await askGroq(primaryModel, keyName);
+      if (retryable(result) && primaryModel !== fallbackModel) {
+        console.warn("Primary Groq model failed or returned empty text; trying fallback model", {
+          keyName, primaryModel, status: result.status || null, emptyAnswer: !result.error && !result.answer
+        });
+        result = await askGroq(fallbackModel, keyName);
+      }
+      if (!retryable(result)) break;
+      // Do not cycle through other keys for invalid credentials or malformed requests.
+      if (result.error && result.status !== 429 && result.status < 500) break;
+      console.warn("Groq key attempt failed; trying next configured key", {
+        keyName, status: result.status || null, emptyAnswer: !result.error && !result.answer
       });
-      result = await askGroq(fallbackModel);
     }
     if (result.error) {
       const status = result.status;
@@ -166,7 +177,7 @@ module.exports = async function handler(req, res) {
       if (status === 400 && /model|decommission|not found|does not exist/i.test(providerMessage)) {
         return res.status(502).json({ error: "Groq rejected both configured model choices. Check model availability for your Groq account." });
       }
-      return res.status(502).json({ error: "Groq could not complete the request with either model. Check the API key, quota, model access, and Vercel runtime logs." });
+      return res.status(502).json({ error: "Groq could not complete the request with either model. Check the API key, quota, model access, and server runtime logs." });
     }
     const answer = result.answer;
     if (!answer) return res.status(502).json({ error: "Both Groq models returned no text. Try again with a shorter task and check the Groq model access and quota." });
