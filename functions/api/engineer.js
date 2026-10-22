@@ -109,7 +109,7 @@ async function liveWebSearch(query, env) {
 function formatSearchContext(results) {
   if (!results.length) return "";
   return "\n\nLIVE WEB SEARCH RESULTS (current search; snippets are leads, not guaranteed facts):\n" +
-    results.map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + (r.publishedDate ? "\nPublished date (search provider metadata; verify on article page): " + r.publishedDate : "") + "\nSnippet: " + r.snippet + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
+    results.slice(0, 4).map((r, i) => (i + 1) + ". " + r.title + "\nURL: " + r.url + (r.publishedDate ? "\nPublished date (search provider metadata; verify on article page): " + r.publishedDate : "") + "\nSnippet: " + String(r.snippet || "").slice(0, 350) + "\nProvider: " + (r.provider || "DuckDuckGo")).join("\n\n") +
     "\n\nUse these live search results as evidence, not as unquestionable truth. Cite relevant sources with clickable links using exact URLs, distinguish sourced facts from inference, and say when results are insufficient or conflicting. For research requests, prioritize journal publisher pages, DOI landing pages, PubMed, or institutional repositories; report publication dates only when supplied in search metadata or visible on the source page; label online-first versus issue publication dates when distinguishable. Exclude irrelevant shopping, profile, regulation, and general-news pages when the user asks for peer-reviewed research. Summarize each paper’s question, method, main finding, and limitation using only supported details. Never invent citations, authors, dates, DOI values, peer-review status, or claim a search succeeded if no results were retrieved. DuckDuckGo Instant Answer results are limited summaries, not a complete web-search listing.";
 }
 
@@ -126,6 +126,7 @@ async function askGroq(env, profile, userMessages) {
         body: JSON.stringify({
           model: env.GROQ_MODEL || "openai/gpt-oss-20b",
           temperature: 0.25,
+          max_completion_tokens: 1200,
           messages: [
             { role: "system", content: profile.prompt + " Apply a rigorous engineering quality protocol: do not claim to be a licensed human professional or guarantee 100% correctness. First identify the user's goal, application, operating environment, loads, performance targets, constraints, and applicable jurisdiction/standards. If critical inputs are missing, ask focused clarifying questions or give a clearly labeled preliminary answer with explicit assumptions—never silently invent specifications. Separate verified facts, estimates, assumptions, and recommendations. Show equations, symbol definitions, SI units, substitutions, dimensional checks, tolerances, uncertainty, and independent cross-checks when relevant. For build/materials requests, provide a bill of materials table with item, required specification/grade, quantity or sizing method, rationale, applicable standard, sourcing/inspection requirements, and unresolved data; do not invent exact quantities, grades, part numbers, or certifications without enough design inputs. Include manufacturing/assembly steps, tools, testing/acceptance criteria, failure modes, hazards, maintenance, and disposal where relevant. Cite standards and sources only when confident they exist; never fabricate citations, test results, simulations, or calculations. For safety-critical systems, legal compliance, medical devices, pressure systems, vehicles, structures, aircraft, mains electricity, or hazardous processes, clearly state that outputs are preliminary and require review by a qualified, appropriately licensed engineer and applicable code compliance before construction or use. Be candid about uncertainty and say when evidence or data is insufficient." },
             ...userMessages.map(m => ({ role: m.role, content: m.content }))
@@ -135,6 +136,11 @@ async function askGroq(env, profile, userMessages) {
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.choices?.[0]?.message?.content?.trim()) {
         return { answer: data.choices[0].message.content.trim(), model: data.model || env.GROQ_MODEL || "openai/gpt-oss-20b", assistant: profile.name };
+      }
+      if (response.status === 429 || /rate.?limit|tokens per minute|TPM/i.test(data.error?.message || "")) {
+        const retryHeader = response.headers.get("retry-after");
+        const retryAfter = Math.max(1, Math.min(120, Number(retryHeader) || 20));
+        return { error: "NOVA's AI provider is temporarily rate-limited. Please retry in about " + retryAfter + " seconds. Your question has not been lost.", code: "RATE_LIMITED", retryAfter };
       }
       lastError = data.error?.message || ("AI provider returned HTTP " + response.status);
     } catch (e) { lastError = "Could not connect to the AI provider."; }
@@ -161,7 +167,7 @@ After your engineering explanation, include exactly one machine-readable block u
 </eu-scene>
 Create a useful preliminary concept from the user's request. Supported primitive types are box, cylinder, sphere, cone, torus. Include 1-30 objects. All dimensions must be finite positive millimetres; positions and rotations are finite numbers in millimetres/degrees. For cylinders/cones, width and depth represent diameter; height is axial length. Use simple primitives only; do not claim complex surfaces, holes, fillets, simulation, or manufacturing-ready geometry unless represented. If essential dimensions are missing, clearly label reasonable illustrative assumptions in the explanation and keep geometry conceptual. Output valid JSON inside the tags, no markdown fences. Never place code or other text inside the tags.` : "";
   let conversation = Array.isArray(body.messages) ? body.messages : [{ role: "user", content: task }];
-  conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-24).map(m => ({ role: m.role, content: m.content.slice(0, 12000) }));
+  conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-8).map(m => ({ role: m.role, content: m.content.slice(-3500) }));
   if (!conversation.length || conversation[conversation.length - 1].role !== "user") conversation.push({ role: "user", content: task });
   const latestUserQuery = [...conversation].reverse().find(m => m.role === "user")?.content || task;
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
@@ -174,7 +180,7 @@ Create a useful preliminary concept from the user's request. Supported primitive
   if (wantsScene) conversation[conversation.length - 1].content += sceneInstructions;
   const result = await askGroq(env, profile, conversation);
   if (searchResults.length) result.sources = searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"}));
-  if (result.error) return json(result, 502);
+  if (result.error) return json(result, result.code === "RATE_LIMITED" ? 429 : 502);
   if (wantsScene) {
     const match = result.answer.match(/<eu-scene>\s*([\s\S]*?)\s*<\/eu-scene>/i);
     if (match) {
