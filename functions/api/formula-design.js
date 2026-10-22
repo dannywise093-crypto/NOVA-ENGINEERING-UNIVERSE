@@ -98,6 +98,29 @@ async function liveWebSearch(query, env) {
   }
   return [];
 }
+
+function buildResearchQueries(query) {
+  const q = String(query || "").replace(/\s+/g, " ").trim().slice(0, 700);
+  return [...new Set([q, q + ' peer-reviewed journal article DOI 2025 OR 2026', q + ' fatigue damage modelling life estimation machine learning', q + ' site:sciencedirect.com OR site:springer.com OR site:onlinelibrary.wiley.com OR site:mdpi.com'])].slice(0, 4);
+}
+async function crossrefLookup(query) {
+  try {
+    const url = new URL("https://api.crossref.org/works");
+    url.searchParams.set("query.bibliographic", String(query || "").slice(0, 700));
+    url.searchParams.set("rows", "8");
+    url.searchParams.set("select", "DOI,title,author,published,published-online,published-print,container-title,type,URL,score");
+    const response = await fetch(url, { headers: { "accept": "application/json", "user-agent": "NOVA-Engineering-Universe/1.0 (bibliographic verification)" }, signal: AbortSignal.timeout(7000) });
+    if (!response.ok) return { ok: false, reason: "Crossref returned HTTP " + response.status, records: [] };
+    const data = await response.json();
+    const records = (Array.isArray(data.message?.items) ? data.message.items : []).map(item => {
+      const p = item["published-online"]?.["date-parts"]?.[0] || item.published?.["date-parts"]?.[0] || item["published-print"]?.["date-parts"]?.[0] || [];
+      const date = p.length >= 3 ? p.map((v,i)=>i===0?String(v):String(v).padStart(2,"0")).join("-") : p.length ? String(p[0]) : "";
+      return { title: Array.isArray(item.title) ? item.title[0] : "", authors: Array.isArray(item.author) ? item.author.map(a => [a.given,a.family].filter(Boolean).join(" ")).filter(Boolean) : [], publicationDate: date, journal: Array.isArray(item["container-title"]) ? item["container-title"][0] : "", doi: item.DOI || "", doiUrl: item.DOI ? "https://doi.org/" + item.DOI : "", crossrefRecord: item.URL || "", type: item.type || "", score: Number(item.score || 0) };
+    }).filter(r => r.title && r.doi && /^journal-article$/i.test(r.type));
+    return { ok: true, records };
+  } catch { return { ok: false, reason: "Crossref request failed or timed out", records: [] }; }
+}
+
 function formatSearchContext(results) {
   if (!results.length) return "";
   return "\n\nLIVE WEB SEARCH RESULTS (current search; snippets are leads, not guaranteed facts):\n" +
@@ -112,13 +135,35 @@ function formatSearchContext(results) {
   const latestUserQueryRaw = meaningfulUserMessage?.content || task;
   const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
-  const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " recent peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
+  const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
   let searchResults = [];
+  let crossrefStatus = { attempted: false, ok: false, reason: "Not needed for this query", records: [] };
   if (needsLiveSearch(searchQuery)) {
-    try { searchResults = await liveWebSearch(searchQuery, env); } catch { /* Search failure should not block ordinary AI responses. */ }
+    try {
+      const queries = isResearchQuery ? buildResearchQueries(searchQuery) : [searchQuery];
+      const batches = await Promise.all(queries.map(q => liveWebSearch(q, env).catch(() => [])));
+      const seen = new Set();
+      searchResults = batches.flat().filter(r => r && r.url && !seen.has(r.url) && seen.add(r.url)).slice(0, 16);
+      if (isResearchQuery) {
+        crossrefStatus = { attempted: true, ...(await crossrefLookup(latestUserQuery)) };
+        for (const rec of crossrefStatus.records || []) if (!searchResults.some(r => r.url === rec.doiUrl)) searchResults.push({
+          title: rec.title, url: rec.doiUrl, snippet: "Crossref metadata record. Authors: " + rec.authors.join(", ") + ". Journal: " + rec.journal + ". Publication date in Crossref: " + rec.publicationDate + ".",
+          publishedDate: rec.publicationDate, provider: "Crossref DOI metadata", verifiedMetadata: true
+        });
+      }
+    } catch { /* Report actual status; do not claim a successful search. */ }
   }
   if (searchResults.length) conversation[conversation.length - 1].content += formatSearchContext(searchResults);
-  else if (isResearchQuery) conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: The configured search provider returned zero usable results for this query. Live search is therefore unavailable or insufficient for this request. Do not imply that you completed a comprehensive search, do not conclude that no papers exist, and do not invent papers or citations. Clearly report this limitation and suggest that the search be retried or narrowed.";
+  if (isResearchQuery) {
+    conversation[conversation.length - 1].content += "\n\nRESEARCH TOOL STATUS: " + JSON.stringify({
+      webSearchAttempted: needsLiveSearch(searchQuery), webResultCount: searchResults.filter(r => r.provider !== "Crossref DOI metadata").length,
+      webProviders: [...new Set(searchResults.map(r => r.provider))], crossrefAttempted: crossrefStatus.attempted,
+      crossrefSucceeded: crossrefStatus.ok, crossrefRecordCount: (crossrefStatus.records || []).length,
+      crossrefFailure: crossrefStatus.reason || null, crossrefRecords: (crossrefStatus.records || []).slice(0, 8)
+    }) + "\nOnly claim a provider was queried if the status confirms it. Crossref records verify bibliographic metadata as recorded by Crossref; they do NOT independently establish peer-review status or prove findings. Match title, topic, year, journal-article type, DOI, authors and dates. If evidence is weak, label it candidate/unverified. Never invent details to reach a target count. If providers failed, say which layer failed.";
+  } else if (!searchResults.length && needsLiveSearch(searchQuery)) {
+    conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: No usable web results were retrieved. Do not claim a comprehensive search or invent sources. State that live search returned no usable results.";
+  }
 
   const keys = [5, 1, 2, 3, 4, 6, 7].map(n => env["GROQ_API_KEY_" + n]).filter(Boolean);
   if (!keys.length) return json({ error: "Engineering Formula & Design AI is not configured. Add encrypted production Groq secrets in Cloudflare." }, 503);
