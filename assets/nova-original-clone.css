@@ -1465,3 +1465,63 @@ body{padding:26px!important;background:radial-gradient(ellipse at 68% 48%,#1c0d2
   }
 }
 
+/* Match the model selector's compact height; grow only as the message wraps */
+.conversation .user-input {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 0 !important;
+}
+.conversation .user-input .input-box {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  height: auto !important;
+  min-height: 34px !important;
+  max-height: 162px !important;
+  padding: 0 36px 0 10px !important;
+  overflow: hidden !important;
+}
+.conversation .user-input textarea#message-input {
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 140px !important;
+  padding: 8px 0 !important;
+  margin: 0 !important;
+  resize: none !important;
+  overflow-y: auto !important;
+  align-self: center !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+.conversation .user-input textarea#message-input::placeholder {
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+.conversation .user-input #send-button {
+  position: absolute !important;
+  top: 50% !important;
+  right: 7px !important;
+  transform: translateY(-50%) !important;
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.conversation .user-input #send-button i {
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+@media (max-width: 760px) {
+  .conversation .user-input .input-box { min-height: 34px !important; max-height: 162px !important; }
+  .conversation .user-input textarea#message-input { font-size: 12px !important; }
+}
+
