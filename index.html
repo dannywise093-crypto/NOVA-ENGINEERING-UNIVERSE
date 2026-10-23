@@ -92,6 +92,59 @@ body{background:#090d14;color:#edf3fb}
 
 
 /* Dedicated assistant pages are visible and linked from the homepage directory. */
+
+/* NOVA purple-glass visual refresh: reference-inspired responsive landing page */
+:root{--bg:#07030f;--panel:#120b20;--panel2:#1a1030;--line:#493264;--text:#f8f4ff;--muted:#c1b2d3;--cyan:#c7a0ff;--blue:#8050ff;--green:#b8a0ff}
+html{background:#07030f}
+body{background:radial-gradient(ellipse at 50% 0%,#251044 0,transparent 44%),radial-gradient(ellipse at 90% 45%,#160b2c 0,transparent 40%),#07030f;color:#f8f4ff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.top{background:#080510ed;border-bottom:1px solid #38214e;box-shadow:0 8px 34px #0005}
+.nav{min-height:82px}
+.brand{gap:14px;font-size:clamp(15px,2vw,19px);letter-spacing:.6px}
+.brand .logo-image{width:54px;height:54px;filter:drop-shadow(0 0 12px #a76bff88)}
+.brand small{font-size:10px;letter-spacing:2.6px;color:#c4afd9;margin-top:4px}
+.links{gap:17px;color:#e0d3f2}
+.links a:hover{color:#d2a6ff;text-shadow:0 0 16px #b06cff}
+.menu{border-color:#7551a3;background:#180e2a;box-shadow:0 0 20px #9d58ff26;border-radius:14px;padding:11px 17px}
+.hero{padding:66px 0 48px;grid-template-columns:1fr;gap:28px;align-items:start}
+.hero>div:first-child{max-width:760px}
+.eyebrow{color:#c69bff;letter-spacing:3px;font-size:12px}
+.hero h1{font-size:clamp(48px,8vw,82px);line-height:1.06;letter-spacing:-2.7px;margin:22px 0 25px;font-weight:750}
+.hero h1 span{background:linear-gradient(95deg,#c58bff 0%,#8e72ff 55%,#e0b5ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:#eee5fa;font-size:clamp(17px,2.2vw,23px);line-height:1.75;max-width:800px}
+.actions{gap:14px;margin-top:30px}
+.btn{border:1px solid #8d61c2;border-radius:16px;padding:15px 22px;background:linear-gradient(145deg,#211331d9,#100b1c);color:#fff;box-shadow:0 0 0 1px #b785ff20 inset,0 0 22px #8b4de52a;transition:transform .2s,box-shadow .2s,border-color .2s}
+.btn.primary{background:linear-gradient(110deg,#c58cff,#8b6bff);color:#160b24;border:1px solid #e2c3ff;box-shadow:0 0 0 2px #d8b6ff33 inset,0 0 25px #9b5bff75,0 8px 25px #0005}
+.btn:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 0 30px #a965ff55}
+.hero-art{min-height:440px;border:1px solid #754ca1;border-radius:26px;background:radial-gradient(ellipse at 50% 52%,#32144f 0,#180c2c 45%,#0a0613 78%);box-shadow:0 0 0 1px #c8a3ff18 inset,0 20px 70px #0008,0 0 45px #8f45dc1c}
+.gridbg{background-image:radial-gradient(#b886ff8c 1px,transparent 1.5px);background-size:26px 26px;opacity:.16;mask-image:radial-gradient(ellipse,black,transparent 72%)}
+.orbit{width:clamp(190px,28vw,280px);height:clamp(190px,28vw,280px);border-color:#a775ff8c;transform:rotate(-25deg);box-shadow:0 0 50px #a65bff28,inset 0 0 35px #7f43ff15}
+.orbit:before,.orbit:after{border-color:#b17bff7d;width:clamp(250px,38vw,390px);height:clamp(95px,14vw,140px);box-shadow:0 0 24px #9d5cff15}
+.orbit:after{width:clamp(245px,36vw,370px);height:clamp(105px,16vw,155px)}
+.core{width:clamp(110px,17vw,165px);height:clamp(110px,17vw,165px);border-radius:50%;transform:rotate(25deg);background:radial-gradient(circle at 32% 22%,#f1d9ff 0,#bca1ff 12%,#5833a4 48%,#110a20 74%);border:2px solid #d9b7ff;display:grid;place-items:center;color:#080411;font-size:clamp(35px,5vw,56px);font-weight:950;letter-spacing:-3px;text-shadow:0 1px 0 #fff,0 0 18px #e3c4ff;box-shadow:inset 0 0 22px #fff8,inset 0 -15px 25px #160728aa,0 0 30px #a96bffb5,0 0 80px #7e3cdd75}
+.tag{background:#10091ed9;border:1px solid #76519d;border-radius:13px;padding:12px 15px;font-size:12px;color:#e4d4f7;backdrop-filter:blur(12px);box-shadow:0 8px 28px #0004}
+.tag.t1{top:28px;left:24px}.tag.t2{right:22px;top:42%}.tag.t3{bottom:28px;left:30px}
+.stats{gap:13px;margin-bottom:54px}
+.stat,.card,.workspace{background:linear-gradient(145deg,#180e27,#0c0715);border-color:#38234d;border-radius:16px}
+.stat{padding:20px;box-shadow:0 10px 30px #0003}
+.stat b{color:#d0a5ff}
+section{scroll-margin-top:100px}
+.section-head h2{letter-spacing:-.8px}
+.card{box-shadow:0 12px 32px #0003}
+.card:hover{border-color:#a06be1;box-shadow:0 15px 40px #7f42ba20}
+.icon{background:#25143a;color:#d2a3ff}
+.workspace{box-shadow:0 18px 60px #0005}
+.tab{background:#10091b;border-color:#493260;color:#cbb9df}
+.tab.active{background:#321a4c;color:#e4c9ff;border-color:#a56bde}
+.controls,.ai-panel{background:#100a1a;border-color:#493260}
+.controls input,.controls select,.field input,.field select,.field textarea,.ai-panel textarea{background:#090510;border-color:#50386b}
+.stage{border-color:#583a78;background:radial-gradient(ellipse at center,#27143d,#090510 75%)}
+.result,.answer,.ai-output{background:#0a0612;border-color:#493260}
+.badge{border-color:#76509b;color:#d3aaff}
+footer{border-top-color:#38234d}
+@media(min-width:800px){.hero{grid-template-columns:1.05fr .95fr;align-items:center;gap:32px}.hero-art{min-height:470px}}
+@media(max-width:800px){.nav{height:auto;min-height:76px}.hero{grid-template-columns:1fr;padding:54px 0 36px;gap:28px}.hero-art{min-height:390px}.links{top:76px;background:#0b0613;border-bottom-color:#493260}.stats{grid-template-columns:1fr}.hero h1{font-size:clamp(48px,11vw,68px)}.actions .btn{flex:1 1 210px}}
+@media(max-width:520px){.wrap{width:calc(100% - 28px)}.brand .logo-image{width:48px;height:48px}.brand{font-size:14px;gap:10px}.brand small{font-size:9px;letter-spacing:2px}.hero{padding-top:52px}.hero h1{font-size:clamp(44px,12vw,58px);letter-spacing:-1.8px;margin:20px 0}.hero p{font-size:17px;line-height:1.8}.hero-art{min-height:360px}.tag{font-size:10px;padding:9px 10px}.tag.t1{left:12px;top:16px}.tag.t2{right:12px}.tag.t3{left:14px;bottom:17px}.actions{display:grid;grid-template-columns:1fr}.actions .btn{width:100%;min-height:56px}.stat{padding:16px}.section-head{gap:8px}}
+
 </style>
 <link rel="stylesheet" href="assets/engineering-workspace.css">
 
@@ -112,7 +165,7 @@ body{background:#090d14;color:#edf3fb}
 <body>
 <header class="top"><div class="wrap nav"><a class="brand" href="#home"><img class="logo-image" src="assets/nova-logo.svg" alt="NOVA Engineering Universe logo"><span>ENGINEERING UNIVERSE<small>RESEARCH • DESIGN • BUILD</small></span></a><nav class="links" id="links"><a href="ai.html">AI Workspace</a><a href="formula-design-ai.html">Formula &amp; Design AI</a><a href="ask-engineering-ai.html">Ask Engineering AI</a><a href="mechanical-ai.html">Mechanical AI</a><a href="research-brief.html">Build a Research Brief</a><a href="#studio">3D Studio</a><a href="index.html#worldStudio">Universe Creator</a><a href="cad-studio.html">Real CAD Studio</a><a href="#calculators">Calculators</a><a href="#library">Project Library</a></nav><button class="menu" id="menu" type="button" aria-controls="links" aria-expanded="false" onclick="var n=document.getElementById('links');var o=n.style.display!=='flex';n.style.display=o?'flex':'none';if(o){n.style.flexDirection='column';n.style.position='absolute';n.style.top='70px';n.style.left='0';n.style.right='0';n.style.zIndex='9999';n.style.background='#07111f';n.style.padding='18px 5%';n.style.borderBottom='1px solid #344154';n.style.gap='18px';}this.setAttribute('aria-expanded',String(o));">Menu ☰</button></div></header>
 <main>
-<div class="wrap" id="home"><div class="hero"><div><div class="eyebrow">Engineering intelligence platform</div><h1>Imagine it.<br><span>Engineer it.</span></h1><p>Explore engineering concepts, calculate real-world values, prototype mechanical shapes, and keep your design work together in one mobile-friendly workspace.</p><div class="actions"><a class="btn primary" href="ai.html">Open AI Workspace ↗</a><a class="btn" href="#studio">Open Design Studio</a></div></div><div class="hero-art"><div class="gridbg"></div><div class="tag t1">MECHANICAL SYSTEMS</div><div class="tag t2">DESIGN / 3D</div><div class="tag t3">ENGINEERING LAB v0.1</div><div class="orbit"><div class="core">EU</div></div></div></div>
+<div class="wrap" id="home"><div class="hero"><div><div class="eyebrow">Engineering intelligence platform</div><h1>Imagine it.<br><span>Engineer it.</span></h1><p>Explore engineering concepts, calculate real-world values, prototype mechanical shapes, and keep your design work together in one mobile-friendly workspace.</p><div class="actions"><a class="btn primary" href="ai.html">Open AI Workspace ↗</a><a class="btn" href="#studio">Open Design Studio</a></div></div><div class="hero-art"><div class="gridbg"></div><div class="tag t1">MECHANICAL SYSTEMS</div><div class="tag t2">DESIGN / 3D</div><div class="tag t3">ENGINEERING LAB v0.1</div><div class="orbit"><div class="core">EN</div></div></div></div>
 <div class="stats"><div class="stat"><b>01 / Explore</b><span>Research and concept development</span></div><div class="stat"><b>02 / Calculate</b><span>Interactive engineering formulas</span></div><div class="stat"><b>03 / Prototype</b><span>Adjustable shape preview and export</span></div></div></div>
 <section id="studio"><div class="wrap"><div class="section-head"><div><div class="eyebrow">02 — Prototype</div><h2>Mechanical Design Studio</h2></div><p>Adjust a simple parametric primitive, rotate the preview, and export an OBJ mesh. This is a lightweight concept tool—not a substitute for validated CAD or simulation software.</p></div><div class="workspace"><div class="editor-toolbar"><div class="editor-brand">EU / <span>DESIGN EDITOR</span> <span class="badge">BETA</span></div><div class="editor-actions"><span class="editor-chip">● VIEWPORT</span><span class="editor-chip">WORLD: MM</span><span class="editor-chip">SNAP: OFF</span><span class="editor-chip">LIVE PREVIEW</span></div></div><div class="editor-workspace-body"><div class="editor-subbar"><span class="editor-chip">GEOMETRY</span><span class="editor-chip">TRANSFORM</span><span class="editor-chip">MATERIALS</span><span class="editor-chip">EXPORT</span><div style="flex:1"></div><span class="editor-chip">SELECTED OBJECT: MAIN PART</span></div><div class="tabs"><button class="tab active" data-shape="box">Block</button><button class="tab" data-shape="cylinder">Cylinder</button><button class="tab" data-shape="gear">Gear-like disc</button></div><div class="design-grid"><div class="controls"><span class="badge">PARAMETRIC MODEL</span><label for="width">Width / diameter (mm)</label><input type="number" id="width" min="5" max="500" value="80"><label for="height">Height / thickness (mm)</label><input type="number" id="height" min="5" max="500" value="40"><label for="depth">Depth / length (mm)</label><input type="number" id="depth" min="5" max="500" value="60"><label for="rotation">Preview rotation</label><input type="range" id="rotation" min="0" max="360" value="25"><div class="actions"><button class="btn primary" id="updateModel">Update preview</button><button class="btn" id="exportObj">Export OBJ</button><button class="btn" id="exportStl">Export STL</button></div><button class="btn" id="saveModel" style="width:100%;margin-top:9px">Save design locally</button><p class="note">Units: millimetres. Export is a basic mesh approximation.</p><div class="editor-chip" style="margin-top:10px">OBJECT / MAIN PART</div><div class="editor-chip" style="margin-top:6px">MESH / PROCEDURAL</div><div class="editor-chip" style="margin-top:6px">RENDER / PREVIEW</div></div><div class="stage"><canvas id="eu3dCanvas" aria-label="Interactive 3D engineering viewport"></canvas><span class="stage-caption" id="modelName">BLOCK / PREVIEW</span><span class="stage-caption right" id="dimensions">80 × 40 × 60 mm</span><svg id="modelSvg" viewBox="0 0 420 300" role="img" aria-label="Parametric 3D shape preview"><defs><linearGradient id="faceA" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#61e4ff"/><stop offset="1" stop-color="#287ab5"/></linearGradient><linearGradient id="faceB" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3d9ed2"/><stop offset="1" stop-color="#17436e"/></linearGradient></defs><g id="shapeGroup"><polygon points="210,65 310,112 210,160 110,112" fill="#61e4ff"/><polygon points="110,112 210,160 210,250 110,202" fill="url(#faceB)"/><polygon points="210,160 310,112 310,202 210,250" fill="url(#faceA)"/></g></svg></div></div></div><div class="editor-statusbar"><span><strong>● READY</strong> &nbsp; Concept viewport</span><span>AI concept design • Basic mesh export • Local project save</span><span>UNITS: MM</span></div></div></div></section>
 
