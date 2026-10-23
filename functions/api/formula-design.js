@@ -251,21 +251,7 @@ function formatSearchContext(results) {
       });
     }
   }
-  if (needsLiveSearch(searchQuery) && !isResearchQuery) {
-    try {
-      const queries = isResearchQuery ? buildResearchQueries(searchQuery) : [searchQuery];
-      const batches = await Promise.all(queries.map(q => liveWebSearch(q, env).catch(() => [])));
-      const seen = new Set();
-      searchResults = batches.flat().filter(r => r && r.url && !seen.has(r.url) && seen.add(r.url)).slice(0, 16);
-      if (isResearchQuery) {
-        crossrefStatus = { attempted: true, ...(await crossrefLookup(latestUserQuery)) };
-        for (const rec of crossrefStatus.records || []) if (!searchResults.some(r => r.url === rec.doiUrl)) searchResults.push({
-          title: rec.title, url: rec.doiUrl, snippet: "Crossref metadata record. Authors: " + rec.authors.join(", ") + ". Journal: " + rec.journal + ". Publication date in Crossref: " + rec.publicationDate + ".",
-          publishedDate: rec.publicationDate, provider: "Crossref DOI metadata", verifiedMetadata: true
-        });
-      }
-    } catch { /* Report actual status; do not claim a successful search. */ }
-  }
+  // Formula Design uses only the named official scholarly/technical APIs for research discovery. No general web search engine is used.
   if (searchResults.length) conversation[conversation.length - 1].content += formatSearchContext(searchResults);
   if (isResearchQuery) {
     conversation[conversation.length - 1].content += "\n\nRESEARCH TOOL STATUS: " + JSON.stringify({
