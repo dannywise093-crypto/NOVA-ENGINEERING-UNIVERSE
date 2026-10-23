@@ -292,11 +292,12 @@ Create a useful preliminary concept from the user's request. Supported primitive
     conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: No usable web results were retrieved. Do not claim a comprehensive search or invent sources. State that live search returned no usable results.";
   }
   if (wantsScene) conversation[conversation.length - 1].content += sceneInstructions;
-  let result = await askGroq(env, profile, conversation);
+  // Prefer the configured Cloudflare Workers AI model for NOVA; use Groq only if it fails.
+  let result = await askCloudflareAI(env, conversation, profile.name);
   if (result.error) {
-    const fallback = await askCloudflareAI(env, conversation, profile.name);
-    if (!fallback.error) result = fallback;
-    else result.fallbackError = fallback.error;
+    const cloudflareError = result.error;
+    result = await askGroq(env, profile, conversation);
+    if (result.error) result.fallbackError = cloudflareError;
   }
   if (searchResults.length) result.sources = searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"}));
   if (result.error) return json(result, result.code === "RATE_LIMITED" ? 429 : 502);
