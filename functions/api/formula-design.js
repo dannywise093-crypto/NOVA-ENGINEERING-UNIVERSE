@@ -2,6 +2,33 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
 });
 
+
+async function askCloudflareAI(env, messages, assistantName) {
+  const endpoint = String(env.CLOUDFLARE_AI_URL || "https://dark-frost-f4f4.dannywise093.workers.dev/api/chat").trim();
+  if (!endpoint.startsWith("https://")) return { error: "Cloudflare AI fallback URL must use HTTPS." };
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json", "accept": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "You are NOVA Engineering Universe, an engineering research assistant. Answer engineering and formula-design questions only. Be accurate and transparent about uncertainty. Never invent sources, DOIs, papers, tests, or claim that a search succeeded when it did not. Treat supplied research results as evidence, not proof. Mark safety-critical design outputs as preliminary and require qualified engineering review. Return a helpful answer to the user's latest question." },
+          ...messages
+        ]
+      }),
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await response.json().catch(() => ({}));
+    const answer = String(data.response || data.answer || data.choices?.[0]?.message?.content || "").trim();
+    if (!response.ok || data.ok === false || !answer) {
+      return { error: "Cloudflare Workers AI fallback failed (HTTP " + response.status + ")." };
+    }
+    return { answer, model: data.model || "@cf/meta/llama-3.1-8b-instruct", assistant: assistantName, provider: "cloudflare_workers_ai" };
+  } catch {
+    return { error: "Could not connect to the Cloudflare Workers AI fallback." };
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch { return json({ error: "Request body must be valid JSON." }, 400); }
@@ -166,7 +193,6 @@ function formatSearchContext(results) {
   }
 
   const keys = [5, 1, 2, 3, 4, 6, 7].map(n => env["GROQ_API_KEY_" + n]).filter(Boolean);
-  if (!keys.length) return json({ error: "Engineering Formula & Design AI is not configured. Add encrypted production Groq secrets in Cloudflare." }, 503);
   let lastError = "The AI provider returned an empty response.";
   let rateLimitFailure = null;
   for (const key of keys) {
@@ -207,6 +233,8 @@ function formatSearchContext(results) {
       lastError = data.error?.message || ("AI provider returned HTTP " + response.status);
     } catch { lastError = "Could not connect to the AI provider."; }
   }
-  if (rateLimitFailure) return json(rateLimitFailure, 429);
-  return json({ error: lastError }, 502);
+  const fallback = await askCloudflareAI(env, conversation, "Engineering Formula & Design AI");
+  if (!fallback.error) return json({ ...fallback, sources: searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"})) }, 200);
+  if (rateLimitFailure) return json({ ...rateLimitFailure, fallbackError: fallback.error }, 429);
+  return json({ error: lastError, fallbackError: fallback.error }, keys.length ? 502 : 503);
 }
