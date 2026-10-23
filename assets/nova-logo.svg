@@ -1,16 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
-<title id="title">NOVA Engineering Universe EN monogram</title><desc id="desc">A luminous lavender EN engineering monogram inside a dark rounded square.</desc>
-<defs>
- <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#211133"/><stop offset=".58" stop-color="#10091d"/><stop offset="1" stop-color="#080510"/></linearGradient>
- <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0d8ff"/><stop offset=".48" stop-color="#c08aff"/><stop offset="1" stop-color="#7564ff"/></linearGradient>
- <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-</defs>
-<rect x="4" y="4" width="120" height="120" rx="27" fill="url(#bg)" stroke="#8055ad" stroke-width="2"/>
-<rect x="9" y="9" width="110" height="110" rx="23" fill="none" stroke="#d7b5ff" stroke-opacity=".18"/>
-<g fill="none" stroke="url(#g)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
- <path d="M25 91V36l34 55V36"/>
- <path d="M103 36H72V91H104M73 63H98"/>
-</g>
-<path d="M25 36h10M49 91h10M93 36h10M94 91h10" stroke="#fff" stroke-opacity=".85" stroke-width="2" stroke-linecap="round"/>
-<circle cx="25" cy="36" r="3.5" fill="#f1dfff"/><circle cx="104" cy="91" r="3.5" fill="#b99aff"/>
+<title id="title">NOVA Engineering Universe logo</title><desc id="desc">A luminous lavender geometric N inside a dark rounded square.</desc>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#211133"/><stop offset=".58" stop-color="#10091d"/><stop offset="1" stop-color="#080510"/></linearGradient><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0d8ff"/><stop offset=".48" stop-color="#c08aff"/><stop offset="1" stop-color="#7564ff"/></linearGradient><filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect x="4" y="4" width="120" height="120" rx="27" fill="url(#bg)" stroke="#8055ad" stroke-width="2"/><rect x="9" y="9" width="110" height="110" rx="23" fill="none" stroke="#d7b5ff" stroke-opacity=".18"/>
+<path d="M31 96V32h14l38 46V32h14v64H83L45 50v46Z" fill="none" stroke="url(#g)" stroke-width="6.5" stroke-linejoin="round" filter="url(#glow)"/><path d="M31 32h14M83 96h14" stroke="#fff" stroke-opacity=".85" stroke-width="2" stroke-linecap="round"/><circle cx="31" cy="32" r="3.5" fill="#f1dfff"/><circle cx="97" cy="96" r="3.5" fill="#b99aff"/>
 </svg>
