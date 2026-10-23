@@ -204,6 +204,33 @@ async function askGroq(env, profile, userMessages) {
   return { error: lastError };
 }
 
+
+async function askCloudflareAI(env, messages, assistantName) {
+  const endpoint = String(env.CLOUDFLARE_AI_URL || "https://dark-frost-f4f4.dannywise093.workers.dev/api/chat").trim();
+  if (!endpoint.startsWith("https://")) return { error: "Cloudflare AI fallback URL must use HTTPS." };
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json", "accept": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "You are NOVA Engineering Universe, an engineering research assistant. Answer engineering and formula-design questions only. Be accurate and transparent about uncertainty. Never invent sources, DOIs, papers, tests, or claim that a search succeeded when it did not. Treat supplied research results as evidence, not proof. Mark safety-critical design outputs as preliminary and require qualified engineering review. Return a helpful answer to the user's latest question." },
+          ...messages
+        ]
+      }),
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await response.json().catch(() => ({}));
+    const answer = String(data.response || data.answer || data.choices?.[0]?.message?.content || "").trim();
+    if (!response.ok || data.ok === false || !answer) {
+      return { error: "Cloudflare Workers AI fallback failed (HTTP " + response.status + ")." };
+    }
+    return { answer, model: data.model || "@cf/meta/llama-3.1-8b-instruct", assistant: assistantName, provider: "cloudflare_workers_ai" };
+  } catch {
+    return { error: "Could not connect to the Cloudflare Workers AI fallback." };
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch { return json({ error: "Request body must be valid JSON." }, 400); }
@@ -265,7 +292,12 @@ Create a useful preliminary concept from the user's request. Supported primitive
     conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: No usable web results were retrieved. Do not claim a comprehensive search or invent sources. State that live search returned no usable results.";
   }
   if (wantsScene) conversation[conversation.length - 1].content += sceneInstructions;
-  const result = await askGroq(env, profile, conversation);
+  let result = await askGroq(env, profile, conversation);
+  if (result.error) {
+    const fallback = await askCloudflareAI(env, conversation, profile.name);
+    if (!fallback.error) result = fallback;
+    else result.fallbackError = fallback.error;
+  }
   if (searchResults.length) result.sources = searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"}));
   if (result.error) return json(result, result.code === "RATE_LIMITED" ? 429 : 502);
   if (wantsScene) {
