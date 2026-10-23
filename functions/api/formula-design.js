@@ -132,7 +132,7 @@ function buildResearchQueries(query) {
 }
 // Search official scholarly/technical APIs directly; this is separate from general web search.
 async function searchResearchRepositories(query) {
-  const q = String(query || "").replace(/\\s+/g, " ").trim().slice(0, 300);
+  const q = String(query || "").replace(/\s+/g, " ").trim().slice(0, 300);
   const enc = encodeURIComponent(q);
   const safeFetch = async (url, options = {}) => {
     try {
@@ -141,11 +141,11 @@ async function searchResearchRepositories(query) {
       return { ok: true, status: r.status, text: await r.text() };
     } catch { return { ok: false, status: 0 }; }
   };
-  const escXml = s => String(s || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\s+/g, " ").trim();
+  const escXml = s => String(s || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
   const results = [];
   const status = {};
   const add = (provider, title, url, snippet = "", date = "", doi = "") => {
-    if (!title || !url || !/^https?:\\/\\//i.test(url)) return;
+    if (!title || !url || !/^https?:\/\//i.test(url)) return;
     if (results.some(r => r.url === url || (doi && r.doi && r.doi.toLowerCase() === doi.toLowerCase()))) return;
     results.push({ provider, title: String(title).slice(0, 240), url, snippet: String(snippet || "").slice(0, 500), ...(date ? { publishedDate: date } : {}), ...(doi ? { doi } : {}) });
   };
@@ -154,10 +154,10 @@ async function searchResearchRepositories(query) {
       const r = await safeFetch("https://export.arxiv.org/api/query?search_query=all:" + enc + "&start=0&max_results=5");
       status.arXiv = r.ok ? "success" : "unavailable";
       if (!r.ok) return;
-      for (const entry of (r.text.match(/<entry>[\\s\\S]*?<\\/entry>/gi) || [])) {
-        const title = escXml((entry.match(/<title>([\\s\\S]*?)<\\/title>/i) || [])[1]);
-        const url = ((entry.match(/<id>([\\s\\S]*?)<\\/id>/i) || [])[1] || "").trim();
-        const summary = escXml((entry.match(/<summary>([\\s\\S]*?)<\\/summary>/i) || [])[1]);
+      for (const entry of (r.text.match(/<entry>[\s\\S]*?<\/entry>/gi) || [])) {
+        const title = escXml((entry.match(/<title>([\s\\S]*?)<\/title>/i) || [])[1]);
+        const url = ((entry.match(/<id>([\s\\S]*?)<\/id>/i) || [])[1] || "").trim();
+        const summary = escXml((entry.match(/<summary>([\s\\S]*?)<\/summary>/i) || [])[1]);
         const date = ((entry.match(/<published>([^<]+)/i) || [])[1] || "").slice(0,10);
         add("arXiv", title, url, summary, date);
       }
@@ -242,6 +242,14 @@ function formatSearchContext(results) {
     repositoryResults = repoSearch.results;
     repositoryStatus.status = repoSearch.status;
     searchResults.push(...repositoryResults);
+    crossrefStatus = { attempted: true, ...(await crossrefLookup(latestUserQuery)) };
+    for (const rec of crossrefStatus.records || []) {
+      if (!searchResults.some(r => r.url === rec.doiUrl)) searchResults.push({
+        title: rec.title, url: rec.doiUrl,
+        snippet: "Crossref metadata. Authors: " + rec.authors.join(", ") + ". Journal: " + rec.journal + ". Publication date: " + rec.publicationDate + ".",
+        publishedDate: rec.publicationDate, provider: "Crossref DOI metadata", doi: rec.doi, verifiedMetadata: true
+      });
+    }
   }
   if (needsLiveSearch(searchQuery) && !isResearchQuery) {
     try {
