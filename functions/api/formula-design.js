@@ -243,7 +243,7 @@ function formatSearchContext(results) {
     repositoryStatus.status = repoSearch.status;
     searchResults.push(...repositoryResults);
   }
-  if (needsLiveSearch(searchQuery)) {
+  if (needsLiveSearch(searchQuery) && !isResearchQuery) {
     try {
       const queries = isResearchQuery ? buildResearchQueries(searchQuery) : [searchQuery];
       const batches = await Promise.all(queries.map(q => liveWebSearch(q, env).catch(() => [])));
@@ -270,6 +270,12 @@ function formatSearchContext(results) {
     conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: No usable web results were retrieved. Do not claim a comprehensive search or invent sources. State that live search returned no usable results.";
   }
 
+  // Cloudflare Workers AI is the preferred provider; Groq is retained as a resilience fallback.
+  const cloudflareFirst = await askCloudflareAI(env, conversation, "Engineering Formula & Design AI");
+  if (!cloudflareFirst.error) {
+    return json({ ...cloudflareFirst, sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Research repository"})), researchRepositories: repositoryStatus }, 200);
+  }
+
   const keys = [5, 1, 2, 3, 4, 6, 7].map(n => env["GROQ_API_KEY_" + n]).filter(Boolean);
   let lastError = "The AI provider returned an empty response.";
   let rateLimitFailure = null;
@@ -290,7 +296,7 @@ function formatSearchContext(results) {
       });
       const data = await response.json().catch(() => ({}));
       const answer = data.choices?.[0]?.message?.content?.trim();
-      if (response.ok && answer) return json({ answer, model: data.model || env.GROQ_MODEL || "openai/gpt-oss-20b", assistant: "Engineering Formula & Design AI", sources: searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"})) });
+      if (response.ok && answer) return json({ answer, model: data.model || env.GROQ_MODEL || "openai/gpt-oss-20b", assistant: "Engineering Formula & Design AI", provider: "groq", sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Research repository"})), researchRepositories: repositoryStatus });
       if (response.status === 429 || /rate.?limit|tokens per minute|TPM|requests per day|tokens per day|quota exceeded/i.test(data.error?.message || "")) {
         const retryHeader = response.headers.get("retry-after");
         const errorText = String(data.error?.message || "");
@@ -312,7 +318,7 @@ function formatSearchContext(results) {
     } catch { lastError = "Could not connect to the AI provider."; }
   }
   const fallback = await askCloudflareAI(env, conversation, "Engineering Formula & Design AI");
-  if (!fallback.error) return json({ ...fallback, sources: searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"})) }, 200);
+  if (!fallback.error) return json({ ...fallback, sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Research repository"})), researchRepositories: repositoryStatus }, 200);
   if (rateLimitFailure) return json({ ...rateLimitFailure, fallbackError: fallback.error }, 429);
   return json({ error: lastError, fallbackError: fallback.error }, keys.length ? 502 : 503);
 }
