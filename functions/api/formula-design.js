@@ -23,7 +23,7 @@ async function askCloudflareAI(env, messages, assistantName) {
     if (!response.ok || data.ok === false || !answer) {
       return { error: "Cloudflare Workers AI fallback failed (HTTP " + response.status + ")." };
     }
-    return { answer, model: data.model || "@cf/meta/llama-3.1-8b-instruct", assistant: assistantName, provider: "cloudflare_workers_ai" };
+    return { answer, model: data.model || env.CLOUDFLARE_AI_MODEL || "Cloudflare Workers AI (model not reported)", assistant: assistantName, provider: "cloudflare_workers_ai" };
   } catch {
     return { error: "Could not connect to the Cloudflare Workers AI fallback." };
   }
@@ -130,6 +130,75 @@ function buildResearchQueries(query) {
   const q = String(query || "").replace(/\s+/g, " ").trim().slice(0, 700);
   return [...new Set([q, q + ' peer-reviewed journal article DOI 2025 OR 2026', q + ' fatigue damage modelling life estimation machine learning', q + ' site:sciencedirect.com OR site:springer.com OR site:onlinelibrary.wiley.com OR site:mdpi.com'])].slice(0, 4);
 }
+// Search official scholarly/technical APIs directly; this is separate from general web search.
+async function searchResearchRepositories(query) {
+  const q = String(query || "").replace(/\\s+/g, " ").trim().slice(0, 300);
+  const enc = encodeURIComponent(q);
+  const safeFetch = async (url, options = {}) => {
+    try {
+      const r = await fetch(url, { headers: { accept: "application/json, application/atom+xml, application/xml", "user-agent": "NOVA-Engineering-Universe/1.0 (research discovery)" }, signal: AbortSignal.timeout(6500), ...options });
+      if (!r.ok) return { ok: false, status: r.status };
+      return { ok: true, status: r.status, text: await r.text() };
+    } catch { return { ok: false, status: 0 }; }
+  };
+  const escXml = s => String(s || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\s+/g, " ").trim();
+  const results = [];
+  const status = {};
+  const add = (provider, title, url, snippet = "", date = "", doi = "") => {
+    if (!title || !url || !/^https?:\\/\\//i.test(url)) return;
+    if (results.some(r => r.url === url || (doi && r.doi && r.doi.toLowerCase() === doi.toLowerCase()))) return;
+    results.push({ provider, title: String(title).slice(0, 240), url, snippet: String(snippet || "").slice(0, 500), ...(date ? { publishedDate: date } : {}), ...(doi ? { doi } : {}) });
+  };
+  const tasks = await Promise.all([
+    (async () => {
+      const r = await safeFetch("https://export.arxiv.org/api/query?search_query=all:" + enc + "&start=0&max_results=5");
+      status.arXiv = r.ok ? "success" : "unavailable";
+      if (!r.ok) return;
+      for (const entry of (r.text.match(/<entry>[\\s\\S]*?<\\/entry>/gi) || [])) {
+        const title = escXml((entry.match(/<title>([\\s\\S]*?)<\\/title>/i) || [])[1]);
+        const url = ((entry.match(/<id>([\\s\\S]*?)<\\/id>/i) || [])[1] || "").trim();
+        const summary = escXml((entry.match(/<summary>([\\s\\S]*?)<\\/summary>/i) || [])[1]);
+        const date = ((entry.match(/<published>([^<]+)/i) || [])[1] || "").slice(0,10);
+        add("arXiv", title, url, summary, date);
+      }
+    })(),
+    (async () => {
+      const r = await safeFetch("https://api.semanticscholar.org/graph/v1/paper/search?query=" + enc + "&limit=5&fields=title,year,authors,abstract,url,externalIds,publicationDate");
+      status.SemanticScholar = r.ok ? "success" : "unavailable";
+      if (!r.ok) return;
+      try { for (const p of JSON.parse(r.text).data || []) add("Semantic Scholar", p.title, p.url || (p.paperId ? "https://www.semanticscholar.org/paper/" + p.paperId : ""), p.abstract || "", p.publicationDate || (p.year ? String(p.year) : ""), p.externalIds?.DOI || ""); } catch {}
+    })(),
+    (async () => {
+      const base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
+      const sr = await safeFetch(base + "esearch.fcgi?db=pubmed&retmode=json&retmax=5&term=" + enc);
+      status.PubMed = sr.ok ? "success" : "unavailable";
+      if (!sr.ok) return;
+      let ids = [];
+      try { ids = JSON.parse(sr.text).esearchresult?.idlist || []; } catch {}
+      if (!ids.length) return;
+      const sm = await safeFetch(base + "esummary.fcgi?db=pubmed&retmode=json&id=" + ids.join(","));
+      if (!sm.ok) { status.PubMed = "partial"; return; }
+      try {
+        const data = JSON.parse(sm.text).result || {};
+        for (const id of ids) { const p = data[id]; if (p && p.uid) add("PubMed", p.title, "https://pubmed.ncbi.nlm.nih.gov/" + id + "/", [p.fulljournalname, p.pubdate].filter(Boolean).join(". "), p.pubdate || "", p.elocationid?.startsWith("doi:") ? p.elocationid.slice(4) : ""); }
+      } catch {}
+    })(),
+    (async () => {
+      const r = await safeFetch("https://api.openalex.org/works?search=" + enc + "&per-page=5&select=id,doi,title,publication_year,authorships,primary_location,biblio");
+      status.OpenAlex = r.ok ? "success" : "unavailable";
+      if (!r.ok) return;
+      try { for (const w of JSON.parse(r.text).results || []) add("OpenAlex", w.title, w.doi || w.id, (w.authorships || []).slice(0,4).map(a => a.author?.display_name).filter(Boolean).join(", "), w.publication_year ? String(w.publication_year) : "", w.doi || ""); } catch {}
+    })(),
+    (async () => {
+      const r = await safeFetch("https://ntrs.nasa.gov/api/citations/search?q=" + enc + "&page.size=5&page=0&sort=-date");
+      status.NASA_NTRS = r.ok ? "success" : "unavailable";
+      if (!r.ok) return;
+      try { const data = JSON.parse(r.text); for (const item of data.results || data.hits || []) { const id = item.id || item._id; add("NASA Technical Reports Server", item.title, id ? "https://ntrs.nasa.gov/citations/" + id : item.url, item.abstract || item.description || "", item.publicationDate || item.issueDate || ""); } } catch {}
+    })()
+  ]);
+  return { results: results.slice(0, 20), status };
+}
+
 async function crossrefLookup(query) {
   try {
     const url = new URL("https://api.crossref.org/works");
@@ -163,8 +232,17 @@ function formatSearchContext(results) {
   const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
   const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
+  let repositoryStatus = { attempted: false, status: {} };
+  let repositoryResults = [];
   let searchResults = [];
   let crossrefStatus = { attempted: false, ok: false, reason: "Not needed for this query", records: [] };
+  if (isResearchQuery) {
+    repositoryStatus.attempted = true;
+    const repoSearch = await searchResearchRepositories(latestUserQuery);
+    repositoryResults = repoSearch.results;
+    repositoryStatus.status = repoSearch.status;
+    searchResults.push(...repositoryResults);
+  }
   if (needsLiveSearch(searchQuery)) {
     try {
       const queries = isResearchQuery ? buildResearchQueries(searchQuery) : [searchQuery];
@@ -186,7 +264,7 @@ function formatSearchContext(results) {
       webSearchAttempted: needsLiveSearch(searchQuery), webResultCount: searchResults.filter(r => r.provider !== "Crossref DOI metadata").length,
       webProviders: [...new Set(searchResults.map(r => r.provider))], crossrefAttempted: crossrefStatus.attempted,
       crossrefSucceeded: crossrefStatus.ok, crossrefRecordCount: (crossrefStatus.records || []).length,
-      crossrefFailure: crossrefStatus.reason || null, crossrefRecords: (crossrefStatus.records || []).slice(0, 8)
+      crossrefFailure: crossrefStatus.reason || null, repositorySearchAttempted: repositoryStatus.attempted, repositoryStatus: repositoryStatus.status, repositoryResultCount: repositoryResults.length, repositoryProviders: [...new Set(repositoryResults.map(r => r.provider))], repositoryRecords: repositoryResults.slice(0, 15), crossrefRecords: (crossrefStatus.records || []).slice(0, 8)
     }) + "\nOnly claim a provider was queried if the status confirms it. Crossref records verify bibliographic metadata as recorded by Crossref; they do NOT independently establish peer-review status or prove findings. Match title, topic, year, journal-article type, DOI, authors and dates. If evidence is weak, label it candidate/unverified. Never invent details to reach a target count. If providers failed, say which layer failed.";
   } else if (!searchResults.length && needsLiveSearch(searchQuery)) {
     conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: No usable web results were retrieved. Do not claim a comprehensive search or invent sources. State that live search returned no usable results.";
