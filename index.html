@@ -172,6 +172,25 @@ header .nav>.eu-modebar{order:3;flex:0 0 100%;width:100%;min-width:0;margin:0;po
  .hero-art{min-height:390px}
 }
 
+
+/* Glass-bubble pass: dimensional transparent sphere, specular reflections and luminous orbital rings. */
+.hero-art{position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,rgba(111,57,173,.42) 0%,rgba(38,17,64,.65) 36%,rgba(10,5,18,.98) 78%),#0a0612!important;border:1px solid rgba(191,139,255,.66)!important;box-shadow:inset 0 0 0 1px #e7c9ff20,inset 0 0 70px #9c5bff18,0 0 32px #7f3ecb2b,0 24px 65px #0009!important}
+.hero-art:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(circle at 16% 18%,#e5caff 0 1px,transparent 2px),radial-gradient(circle at 77% 22%,#caa4ff 0 1px,transparent 2px),radial-gradient(circle at 83% 74%,#e5caff 0 1px,transparent 2px),radial-gradient(circle at 22% 80%,#b78cff 0 1px,transparent 2px),radial-gradient(circle at 64% 88%,#d8b5ff 0 1px,transparent 2px),radial-gradient(ellipse at 50% 100%,#9b51ff20,transparent 55%);opacity:.9}
+.hero-art .gridbg{z-index:0;opacity:.2;background-size:22px 22px}
+.hero-art .tag{z-index:4;background:linear-gradient(135deg,rgba(27,14,44,.83),rgba(9,5,18,.74));border-color:#a879d5a6;box-shadow:inset 0 1px 0 #f4e3ff16,0 0 18px #8e4ecb18,0 8px 24px #0005;backdrop-filter:blur(16px)}
+.hero-art .orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-24deg);width:clamp(210px,31vw,300px);height:clamp(210px,31vw,300px);border:2px solid rgba(194,141,255,.48);border-radius:50%;background:radial-gradient(circle at 32% 24%,#e9cfff12,transparent 35%,#7d40c90c 70%);box-shadow:inset 0 0 35px #c58aff0c,0 0 28px #9e58ff12;z-index:2}
+.hero-art .orbit:before,.hero-art .orbit:after{content:"";position:absolute;left:50%;top:50%;width:clamp(280px,42vw,405px);height:clamp(110px,16vw,155px);border:1.5px solid rgba(193,139,255,.74);border-radius:50%;transform:translate(-50%,-50%) rotate(33deg);box-shadow:0 0 12px #a45aff22,inset 0 0 12px #a45aff0a;pointer-events:none}
+.hero-art .orbit:after{width:clamp(265px,39vw,380px);height:clamp(120px,18vw,175px);transform:translate(-50%,-50%) rotate(-52deg);border-color:rgba(145,109,255,.65)}
+.hero-art .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:clamp(145px,21vw,205px);height:clamp(145px,21vw,205px);border-radius:50%;display:grid;place-items:center;overflow:hidden;isolation:isolate;color:#080414;font-size:clamp(39px,5.8vw,59px);font-weight:900;letter-spacing:-3px;text-shadow:0 1px 0 #fff,0 0 15px #fff0,0 0 24px #e7ceffb8;background:radial-gradient(ellipse at 28% 17%,rgba(255,255,255,.98) 0%,rgba(239,220,255,.88) 3%,rgba(188,145,255,.8) 12%,rgba(130,83,209,.48) 27%,rgba(69,35,130,.56) 48%,rgba(19,10,37,.9) 69%,rgba(8,4,18,.98) 82%);border:2px solid rgba(239,216,255,.95);box-shadow:inset 0 3px 9px #fff9,inset 0 -22px 35px #080313c9,inset 13px 0 24px #bda0ff30,0 0 0 5px #c99aff19,0 0 22px #c48affbb,0 0 65px #8c45e980;z-index:3}
+.hero-art .core:before{content:"";position:absolute;z-index:-1;inset:2px;border-radius:50%;background:radial-gradient(ellipse at 28% 16%,rgba(255,255,255,.9) 0%,rgba(255,255,255,.28) 4%,transparent 19%),linear-gradient(135deg,rgba(255,255,255,.18),transparent 34%,transparent 62%,rgba(195,144,255,.2));box-shadow:inset 0 0 18px #fff5}
+.hero-art .core:after{content:"";position:absolute;left:16%;top:10%;width:34%;height:15%;border-radius:50%;transform:rotate(-36deg);background:linear-gradient(90deg,#fff9,#fff2 55%,transparent);filter:blur(1px);box-shadow:0 0 15px #fff9;z-index:2}
+.hero-art .core{animation:euBubbleFloat 7s ease-in-out infinite}
+@keyframes euBubbleFloat{0%,100%{margin-top:0}50%{margin-top:-5px}}
+.hero-art .orbit{animation:euOrbitDrift 18s linear infinite}
+@keyframes euOrbitDrift{from{rotate:0deg}to{rotate:360deg}}
+@media(max-width:800px){.hero-art{min-height:430px}.hero-art .orbit{width:235px;height:235px}.hero-art .core{width:170px;height:170px}.hero-art .orbit:before{width:330px;height:130px}.hero-art .orbit:after{width:310px;height:140px}}
+@media(max-width:520px){.hero-art{min-height:400px}.hero-art .orbit{width:220px;height:220px}.hero-art .core{width:158px;height:158px}.hero-art .orbit:before{width:300px;height:115px}.hero-art .orbit:after{width:285px;height:128px}}
+
 </style>
 <link rel="stylesheet" href="assets/engineering-workspace.css">
 
