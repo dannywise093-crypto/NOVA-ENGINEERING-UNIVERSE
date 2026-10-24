@@ -126,6 +126,20 @@ async function liveWebSearch(query, env) {
   return [];
 }
 
+function extractResearchTopic(query) {
+  const raw = String(query || "").replace(/\\s+/g, " ").trim();
+  // Strip common task instructions so scholarly APIs receive the research topic, not the whole prompt.
+  let topic = raw
+    .replace(/^\\s*(?:please\\s+)?(?:find|search for|identify|list|give me)\\s+(?:the\\s+)?(?:\\d+\\s+)?/i, "")
+    .replace(/\\b(?:recent|latest|peer[- ]reviewed|journal|papers?|studies|articles?)\\b/gi, " ")
+    .replace(/\\b(?:published|publication)\\s+(?:between|from|in)\\s+20\\d{2}(?:\\s*(?:and|to|[-–])\\s*20\\d{2})?\\b/gi, " ")
+    .split(/\\b(?:include|provide|with each|for each|return|cite)\\b/i)[0]
+    .replace(/\\s+/g, " ").replace(/^[\\s:,-]+|[\\s:,.!?-]+$/g, "").trim();
+  const onTopic = raw.match(/\\bon\\s+(.+?)(?:[.!?]\\s|\\binclude\\b|$)/i);
+  if (onTopic && onTopic[1].length > 12) topic = onTopic[1].trim();
+  return (topic || raw).slice(0, 300);
+}
+
 function buildResearchQueries(query) {
   const q = String(query || "").replace(/\s+/g, " ").trim().slice(0, 700);
   return [...new Set([q, q + ' peer-reviewed journal article DOI 2025 OR 2026', q + ' fatigue damage modelling life estimation machine learning', q + ' site:sciencedirect.com OR site:springer.com OR site:onlinelibrary.wiley.com OR site:mdpi.com'])].slice(0, 4);
@@ -235,7 +249,7 @@ async function searchResearchRepositories(query) {
 async function crossrefLookup(query) {
   try {
     const url = new URL("https://api.crossref.org/works");
-    url.searchParams.set("query.bibliographic", String(query || "").slice(0, 700));
+    const topic = extractResearchTopic(query);\n    url.searchParams.set("query.bibliographic", topic);
     url.searchParams.set("rows", "8");
     url.searchParams.set("select", "DOI,title,author,published,published-online,published-print,container-title,type,URL,score");
     const response = await fetch(url, { headers: { "accept": "application/json", "user-agent": "NOVA-Engineering-Universe/1.0 (bibliographic verification)" }, signal: AbortSignal.timeout(7000) });
@@ -245,7 +259,7 @@ async function crossrefLookup(query) {
       const p = item["published-online"]?.["date-parts"]?.[0] || item.published?.["date-parts"]?.[0] || item["published-print"]?.["date-parts"]?.[0] || [];
       const date = p.length >= 3 ? p.map((v,i)=>i===0?String(v):String(v).padStart(2,"0")).join("-") : p.length ? String(p[0]) : "";
       return { title: Array.isArray(item.title) ? item.title[0] : "", authors: Array.isArray(item.author) ? item.author.map(a => [a.given,a.family].filter(Boolean).join(" ")).filter(Boolean) : [], publicationDate: date, journal: Array.isArray(item["container-title"]) ? item["container-title"][0] : "", doi: item.DOI || "", doiUrl: item.DOI ? "https://doi.org/" + item.DOI : "", crossrefRecord: item.URL || "", type: item.type || "", score: Number(item.score || 0) };
-    }).filter(r => r.title && r.doi && /^journal-article$/i.test(r.type));
+    }).filter(r => {\n      if (!r.title || !r.doi || !/^journal-article$/i.test(r.type)) return false;\n      const terms = topic.toLowerCase().match(/[a-z0-9]{4,}/g) || [];\n      const ignored = new Set(["deep","learning","based","using","find","recent","include","exact","title","authors","publication","year","journal","paper","papers","peer","reviewed","doi","official","publisher","short","summary","prioritize","exclude","unrelated","verify","metadata","between"]);\n      const keyTerms = [...new Set(terms.filter(t => !ignored.has(t)))];\n      const title = r.title.toLowerCase();\n      const matches = keyTerms.filter(t => title.includes(t)).length;\n      return keyTerms.length ? matches >= Math.min(2, keyTerms.length) : true;\n    });
     return { ok: true, records };
   } catch { return { ok: false, reason: "Crossref request failed or timed out", records: [] }; }
 }
