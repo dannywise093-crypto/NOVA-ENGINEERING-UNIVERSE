@@ -331,6 +331,48 @@ function formatSearchContext(results) {
     conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: No usable web results were retrieved. Do not claim a comprehensive search or invent sources. State that live search returned no usable results.";
   }
 
+  // Optional direct foundation-model provider selection. API keys are server-side environment secrets only.
+  const selectedProvider = String(body.provider || "groq").toLowerCase();
+  if (["openai", "anthropic", "gemini", "grok"].includes(selectedProvider)) {
+    const config = {
+      openai: { key: env.OPENAI_API_KEY, model: "gpt-4o-mini" },
+      anthropic: { key: env.ANTHROPIC_API_KEY, model: "claude-sonnet-4-20250514" },
+      gemini: { key: env.GEMINI_API_KEY, model: "gemini-2.5-flash" },
+      grok: { key: env.XAI_API_KEY, model: "grok-3-mini" }
+    }[selectedProvider];
+    if (!config.key) return json({ error: selectedProvider.toUpperCase() + " API key is not configured. Add the matching secret environment variable in the hosting dashboard and redeploy." }, 503);
+    try {
+      let response, answer = "";
+      if (selectedProvider === "openai" || selectedProvider === "grok") {
+        const endpoint = selectedProvider === "openai" ? "https://api.openai.com/v1/chat/completions" : "https://api.x.ai/v1/chat/completions";
+        response = await fetch(endpoint, { method: "POST", headers: { authorization: "Bearer " + config.key, "content-type": "application/json" }, body: JSON.stringify({ model: config.model, temperature: 0.2, max_tokens: 1200, messages: conversation }), signal: AbortSignal.timeout(45000) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return json({ error: selectedProvider.toUpperCase() + " API request failed (HTTP " + response.status + "). Check model access, key, quota, and deployment logs." }, 502);
+        answer = data.choices?.[0]?.message?.content || "";
+      } else if (selectedProvider === "anthropic") {
+        const systemMessage = conversation.filter(m => m.role === "system").map(m => m.content).join("\\n");
+        const messages = conversation.filter(m => m.role !== "system");
+        response = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "x-api-key": config.key, "anthropic-version": "2023-06-01", "content-type": "application/json" }, body: JSON.stringify({ model: config.model, max_tokens: 1200, temperature: 0.2, system: systemMessage, messages }), signal: AbortSignal.timeout(45000) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return json({ error: "Anthropic Claude API request failed (HTTP " + response.status + "). Check model access, key, quota, and deployment logs." }, 502);
+        answer = (data.content || []).filter(part => part.type === "text").map(part => part.text || "").join("\\n");
+      } else {
+        const systemMessage = conversation.filter(m => m.role === "system").map(m => m.content).join("\\n");
+        const messages = conversation.filter(m => m.role !== "system").map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+        response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + config.model + ":generateContent", { method: "POST", headers: { "x-goog-api-key": config.key, "content-type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: systemMessage }] }, contents: messages, generationConfig: { temperature: 0.2, maxOutputTokens: 1200 } }), signal: AbortSignal.timeout(45000) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return json({ error: "Google Gemini API request failed (HTTP " + response.status + "). Check model access, key, quota, and deployment logs." }, 502);
+        answer = (data.candidates?.[0]?.content?.parts || []).map(part => part.text || "").join("\\n");
+      }
+      if (Array.isArray(answer)) answer = answer.map(part => typeof part === "string" ? part : part.text || "").join("");
+      answer = typeof answer === "string" ? answer.trim() : "";
+      if (!answer) return json({ error: "The selected AI model returned no text. Try again or select another provider." }, 502);
+      return json({ answer, model: config.model, assistant: "Engineering Formula & Design AI", provider: selectedProvider, sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Research repository"})), researchRepositories: repositoryStatus }, 200);
+    } catch {
+      return json({ error: "Could not connect to the selected AI provider. Check the secret key, model access, quota, and deployment logs." }, 502);
+    }
+  }
+
   // Cloudflare Workers AI is the preferred provider; Groq is retained as a resilience fallback.
   const cloudflareFirst = await askCloudflareAI(env, conversation, "Engineering Formula & Design AI");
   if (!cloudflareFirst.error) {
