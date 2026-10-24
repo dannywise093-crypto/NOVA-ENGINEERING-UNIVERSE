@@ -239,6 +239,45 @@ header .nav>.eu-modebar{position:relative!important;top:auto!important}
  .hero-art .core{width:172px!important;height:172px!important;font-size:48px!important}
 }
 
+
+/* Actual bubble treatment: translucent glass orb plus floating background bubbles. */
+.hero-art{
+ background:
+  radial-gradient(circle at 8% 18%,rgba(196,144,255,.2) 0 2px,transparent 4px),
+  radial-gradient(circle at 82% 16%,rgba(196,144,255,.25) 0 3px,transparent 6px),
+  radial-gradient(circle at 89% 45%,rgba(166,102,255,.2) 0 7px,transparent 18px),
+  radial-gradient(circle at 13% 68%,rgba(166,102,255,.2) 0 5px,transparent 14px),
+  radial-gradient(circle at 78% 84%,rgba(196,144,255,.18) 0 8px,transparent 19px),
+  radial-gradient(ellipse at 50% 65%,rgba(102,43,158,.38),transparent 58%),
+  linear-gradient(145deg,#10091b,#090511 75%)!important;
+ border:1px solid rgba(198,151,255,.72)!important;
+ box-shadow:inset 0 0 45px rgba(157,87,255,.16),0 0 24px rgba(144,72,255,.16)!important;
+}
+.hero-art:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;opacity:.75;
+ background:
+ radial-gradient(circle at 17% 22%,rgba(245,220,255,.9) 0 1.5px,transparent 3px),
+ radial-gradient(circle at 83% 31%,rgba(220,184,255,.8) 0 2px,transparent 4px),
+ radial-gradient(circle at 74% 73%,rgba(220,184,255,.7) 0 1.5px,transparent 3px),
+ radial-gradient(circle at 25% 84%,rgba(220,184,255,.65) 0 1.5px,transparent 3px),
+ radial-gradient(circle at 91% 58%,rgba(173,112,255,.32) 0 8px,transparent 17px),
+ radial-gradient(circle at 8% 51%,rgba(173,112,255,.25) 0 6px,transparent 15px);
+}
+.hero-art .gridbg{opacity:.08!important;z-index:0!important}
+.hero-art .orbit{position:absolute!important;left:50%!important;top:55%!important;display:block!important;width:clamp(230px,66vw,330px)!important;height:clamp(230px,66vw,330px)!important;border:2px solid rgba(203,158,255,.45)!important;border-radius:50%!important;transform:translate(-50%,-50%) rotate(-24deg)!important;z-index:2!important;box-shadow:0 0 38px rgba(163,94,255,.16),inset 0 0 34px rgba(163,94,255,.1)!important}
+.hero-art .orbit:before,.hero-art .orbit:after{content:"";position:absolute!important;left:50%!important;top:50%!important;width:clamp(285px,83vw,410px)!important;height:clamp(100px,28vw,150px)!important;border:1.5px solid rgba(190,132,255,.8)!important;border-radius:50%!important;transform:translate(-50%,-50%) rotate(34deg)!important;box-shadow:0 0 12px rgba(164,91,255,.22)!important}
+.hero-art .orbit:after{width:clamp(275px,79vw,390px)!important;height:clamp(115px,32vw,165px)!important;transform:translate(-50%,-50%) rotate(-53deg)!important;border-color:rgba(145,108,255,.75)!important}
+.hero-art .core{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:clamp(155px,45vw,220px)!important;height:clamp(155px,45vw,220px)!important;border-radius:50%!important;display:grid!important;place-items:center!important;overflow:hidden!important;z-index:3!important;
+ background:
+ radial-gradient(ellipse at 29% 18%,rgba(255,255,255,.98) 0 2%,rgba(245,223,255,.92) 4%,rgba(201,158,255,.8) 12%,rgba(134,83,203,.55) 27%,rgba(62,32,112,.74) 48%,rgba(20,10,37,.96) 70%,rgba(6,3,14,.99) 88%)!important;
+ color:#05030b!important;font-size:clamp(46px,12vw,66px)!important;font-weight:900!important;letter-spacing:-3px!important;text-shadow:0 1px 0 #fff,0 0 10px rgba(226,199,255,.7)!important;
+ border:3px solid rgba(242,220,255,.96)!important;
+ box-shadow:inset 0 4px 9px rgba(255,255,255,.85),inset 0 -25px 40px rgba(0,0,0,.7),inset 12px 0 25px rgba(206,169,255,.32),0 0 0 5px rgba(205,157,255,.14),0 0 24px rgba(195,133,255,.85),0 0 60px rgba(138,65,255,.52)!important;
+}
+.hero-art .core:before{content:"";position:absolute;inset:2px;border-radius:50%;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.24),transparent 30%,transparent 65%,rgba(196,149,255,.15)),radial-gradient(ellipse at 27% 17%,rgba(255,255,255,.95) 0 3%,rgba(255,255,255,.25) 8%,transparent 24%)!important;box-shadow:inset 0 0 18px rgba(255,255,255,.32)!important}
+.hero-art .core:after{content:"";position:absolute;left:15%;top:9%;width:32%;height:13%;border-radius:50%;transform:rotate(-35deg);background:linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.4),transparent);filter:blur(1px);box-shadow:0 0 13px rgba(255,255,255,.7)}
+.hero-art .tag{z-index:5!important;background:rgba(18,9,29,.72)!important;border:1px solid rgba(183,132,226,.55)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 8px 20px rgba(0,0,0,.25)!important;backdrop-filter:blur(12px)!important;color:#e8dcf5!important}
+@media(max-width:520px){.hero-art{min-height:430px!important}.hero-art .orbit{width:235px!important;height:235px!important}.hero-art .core{width:172px!important;height:172px!important}.hero-art .orbit:before{width:310px!important;height:120px!important}.hero-art .orbit:after{width:295px!important;height:132px!important}}
+
 </style>
 <link rel="stylesheet" href="assets/engineering-workspace.css">
 
