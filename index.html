@@ -278,6 +278,37 @@ header .nav>.eu-modebar{position:relative!important;top:auto!important}
 .hero-art .tag{z-index:5!important;background:rgba(18,9,29,.72)!important;border:1px solid rgba(183,132,226,.55)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 8px 20px rgba(0,0,0,.25)!important;backdrop-filter:blur(12px)!important;color:#e8dcf5!important}
 @media(max-width:520px){.hero-art{min-height:430px!important}.hero-art .orbit{width:235px!important;height:235px!important}.hero-art .core{width:172px!important;height:172px!important}.hero-art .orbit:before{width:310px!important;height:120px!important}.hero-art .orbit:after{width:295px!important;height:132px!important}}
 
+
+/* Reference-only correction: remove the extra floating-dot/bubble effect.
+   Keep only the single central glossy EU glass sphere and its orbital rings. */
+.hero-art:after{content:none!important;display:none!important}
+.hero-art{
+ background:
+ radial-gradient(ellipse at 50% 57%,rgba(105,52,158,.28) 0%,rgba(39,19,61,.18) 38%,transparent 67%),
+ linear-gradient(145deg,#10091a 0%,#0b0612 58%,#0a0610 100%)!important;
+}
+.hero-art .gridbg{
+ opacity:.035!important;
+ background-image:linear-gradient(rgba(191,139,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(191,139,255,.06) 1px,transparent 1px)!important;
+}
+.hero-art .orbit{
+ top:54%!important;
+ width:clamp(220px,61vw,310px)!important;
+ height:clamp(220px,61vw,310px)!important;
+ border-color:rgba(197,148,255,.48)!important;
+}
+.hero-art .core{
+ width:clamp(165px,43vw,220px)!important;
+ height:clamp(165px,43vw,220px)!important;
+ background:
+ radial-gradient(ellipse at 29% 18%,rgba(255,255,255,.98) 0 1.5%,rgba(246,229,255,.92) 4%,rgba(195,151,255,.78) 11%,rgba(119,70,186,.5) 24%,rgba(55,29,100,.72) 45%,rgba(18,9,34,.96) 69%,rgba(6,3,13,.99) 88%)!important;
+ box-shadow:inset 0 3px 9px rgba(255,255,255,.8),inset 0 -22px 36px rgba(0,0,0,.68),inset 12px 0 22px rgba(206,169,255,.26),0 0 0 4px rgba(205,157,255,.13),0 0 22px rgba(195,133,255,.78),0 0 52px rgba(138,65,255,.4)!important;
+}
+@media(max-width:520px){
+ .hero-art .orbit{width:230px!important;height:230px!important}
+ .hero-art .core{width:168px!important;height:168px!important}
+}
+
 </style>
 <link rel="stylesheet" href="assets/engineering-workspace.css">
 
