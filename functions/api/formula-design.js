@@ -249,7 +249,8 @@ async function searchResearchRepositories(query) {
 async function crossrefLookup(query) {
   try {
     const url = new URL("https://api.crossref.org/works");
-    const topic = extractResearchTopic(query);\n    url.searchParams.set("query.bibliographic", topic);
+    const topic = extractResearchTopic(query);
+    url.searchParams.set("query.bibliographic", topic);
     url.searchParams.set("rows", "8");
     url.searchParams.set("select", "DOI,title,author,published,published-online,published-print,container-title,type,URL,score");
     const response = await fetch(url, { headers: { "accept": "application/json", "user-agent": "NOVA-Engineering-Universe/1.0 (bibliographic verification)" }, signal: AbortSignal.timeout(7000) });
