@@ -749,6 +749,11 @@ const imageButton=byId("euGenerateImage");
  let selected="mechanical",busy=false;
  const $=id=>document.getElementById(id);
  const cards=[...document.querySelectorAll(".nova-ai-card")];
+ // Provider selector: keys stay on the server; only the provider name is sent by the browser.
+ const providerSelect=document.createElement("select");providerSelect.id="novaModelProvider";providerSelect.setAttribute("aria-label","AI model provider");
+ providerSelect.style.cssText="display:block;width:100%;max-width:420px;margin:12px 0;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text)";
+ [["groq","Groq"],["openai","OpenAI ChatGPT"],["anthropic","Anthropic Claude"],["gemini","Google Gemini"],["grok","xAI Grok"]].forEach(([v,label])=>{const o=document.createElement("option");o.value=v;o.textContent="AI provider: "+label;providerSelect.appendChild(o)});
+ const assistantTaskField=document.getElementById("novaAssistantTask");if(assistantTaskField&&assistantTaskField.parentNode)assistantTaskField.parentNode.insertBefore(providerSelect,assistantTaskField);
  const result=$("novaAssistantResult"),ask=$("novaAskAssistant");
  cards.forEach(card=>card.addEventListener("click",()=>{
   selected=card.dataset.discipline;
@@ -764,7 +769,7 @@ const imageButton=byId("euGenerateImage");
   if(task.length<8){result.className="nova-assistant-result is-error";result.textContent="Please describe your engineering task in at least 8 characters.";return}
   busy=true;ask.disabled=true;ask.textContent="Thinking…";$("novaAssistantState").textContent="Connecting to NOVA engineering AI…";result.className="nova-assistant-result is-loading";result.textContent="Sending your task to the live engineering AI. Please wait…";
   try{
-   const response=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({discipline:selected,task,style:$("novaAssistantMode").value})});
+   const response=await fetch("/api/engineer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({discipline:selected,task,style:$("novaAssistantMode").value,provider:$("novaModelProvider").value})});
    let data;try{data=await response.json()}catch{throw new Error("The server returned an unreadable response. Please retry.")};
    if(!response.ok)throw new Error(data.error||"Engineering AI request failed (HTTP "+response.status+").");
    if(!data.answer)throw new Error("The AI returned an empty response. Please retry.");
@@ -785,6 +790,9 @@ const imageButton=byId("euGenerateImage");
 (function(){
  const byId=id=>document.getElementById(id);
  const run=byId('runFormulaDesignAI'),task=byId('formulaDesignTask'),mode=byId('formulaDesignMode'),status=byId('formulaDesignStatus'),output=byId('formulaDesignOutput');
+ const formulaProvider=document.createElement("select");formulaProvider.id="formulaDesignProvider";formulaProvider.setAttribute("aria-label","Formula AI model provider");formulaProvider.style.cssText="display:block;width:100%;max-width:420px;margin:12px 0;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text)";
+ [["groq","Groq"],["openai","OpenAI ChatGPT"],["anthropic","Anthropic Claude"],["gemini","Google Gemini"],["grok","xAI Grok"]].forEach(([v,label])=>{const o=document.createElement("option");o.value=v;o.textContent="AI provider: "+label;formulaProvider.appendChild(o)});
+ if(task&&task.parentNode)task.parentNode.insertBefore(formulaProvider,task);
  if(!run||!task||!mode||!status||!output)return;
  let lastResult='';
  run.addEventListener('click',async()=>{
@@ -795,7 +803,7 @@ const imageButton=byId("euGenerateImage");
      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),55000);
      let response,data;
      try{
-       response=await fetch('/api/formula-design',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:mode.value,task:prompt}),signal:controller.signal});
+       response=await fetch('/api/formula-design',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:mode.value,task:prompt,provider:formulaProvider.value}),signal:controller.signal});
        data=await response.json().catch(()=>({error:'The AI endpoint returned an unreadable response.'}));
      } finally {clearTimeout(timer);}
      if(!response.ok)throw new Error(data.error||('AI request failed (HTTP '+response.status+').'));
