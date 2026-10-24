@@ -144,14 +144,25 @@ async function searchResearchRepositories(query) {
   const escXml = s => String(s || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
   const results = [];
   const status = {};
+  const stopWords = new Set(["the","and","for","with","from","using","based","into","about","find","paper","papers","research","study","studies","latest","directly"]);
+  const queryTerms = [...new Set(q.toLowerCase().match(/[a-z0-9]{3,}/g) || [])].filter(word => !stopWords.has(word));
+  const queryMentionsBridge = /\\bbridges?\\b/i.test(q);
   const add = (provider, title, url, snippet = "", date = "", doi = "", authors = []) => {
-    if (!title || !url || !/^https?:\/\//i.test(url)) return;
+    if (!title || !url || !/^https?:\\/\\//i.test(url)) return;
+    const searchable = (String(title) + " " + String(snippet || "")).toLowerCase();
+    const matchedTerms = queryTerms.filter(term => searchable.includes(term)).length;
+    // Reject obviously unrelated search hits instead of presenting them as research candidates.
+    if (queryTerms.length >= 3 && matchedTerms < Math.min(2, queryTerms.length)) return;
+    if (queryMentionsBridge && !/\\bbridges?\\b/i.test(searchable)) return;
     if (results.some(r => r.url === url || (doi && r.doi && r.doi.toLowerCase() === doi.toLowerCase()))) return;
     results.push({ provider, title: String(title).slice(0, 240), url, snippet: String(snippet || "").slice(0, 500), ...(date ? { publishedDate: date } : {}), ...(doi ? { doi } : {}), ...(Array.isArray(authors) && authors.length ? { authors: authors.map(a => String(a).slice(0, 120)).slice(0, 12) } : {}) });
   };
   const tasks = await Promise.all([
     (async () => {
-      const r = await safeFetch("https://export.arxiv.org/api/query?search_query=all:" + enc + "&start=0&max_results=5");
+      const arxivQuery = queryMentionsBridge
+        ? 'all:bridge AND (all:"structural health monitoring" OR all:damage OR all:anomaly OR all:structural)'
+        : "all:" + q.split(/\\s+/).map(encodeURIComponent).join("%20");
+      const r = await safeFetch("https://export.arxiv.org/api/query?search_query=" + encodeURIComponent(arxivQuery) + "&start=0&max_results=10");
       status.arXiv = r.ok ? "success" : "unavailable";
       if (!r.ok) return;
       for (const entry of (r.text.match(/<entry>[\s\S]*?<\/entry>/gi) || [])) {
