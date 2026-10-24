@@ -148,7 +148,7 @@ async function searchResearchRepositories(query) {
   const queryTerms = [...new Set(q.toLowerCase().match(/[a-z0-9]{3,}/g) || [])].filter(word => !stopWords.has(word));
   const queryMentionsBridge = /\\bbridges?\\b/i.test(q);
   const add = (provider, title, url, snippet = "", date = "", doi = "", authors = []) => {
-    if (!title || !url || !/^https?:\\/\\//i.test(url)) return;
+    if (!title || !url || !/^https?:\/\//i.test(url)) return;
     const searchable = (String(title) + " " + String(snippet || "")).toLowerCase();
     const matchedTerms = queryTerms.filter(term => searchable.includes(term)).length;
     // Reject obviously unrelated search hits instead of presenting them as research candidates.
