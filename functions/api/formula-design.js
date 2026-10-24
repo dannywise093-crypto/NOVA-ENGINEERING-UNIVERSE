@@ -380,7 +380,7 @@ function formatSearchContext(results) {
             "\n   Source: " + paper.provider +
             "\n   Year: " + year +
             "\n   Original record: " + paper.url +
-            (paper.doi ? "\n   DOI: " + paper.doi : "\\n   DOI: not supplied by this source") +
+            (paper.doi ? "\n   DOI: " + paper.doi : "\n   DOI: not supplied by this source") +
             (paper.snippet ? "\n   Source summary: " + paper.snippet.slice(0, 280) : "");
         }).join("\n\n")
       : "No papers were returned by the repository APIs in this attempt.";
