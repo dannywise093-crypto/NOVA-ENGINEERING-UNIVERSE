@@ -337,18 +337,18 @@ function formatSearchContext(results) {
   if (!fallback.error) return json({ ...fallback, sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Research repository"})), researchRepositories: repositoryStatus }, 200);
   if (rateLimitFailure && isResearchQuery) {
     const providers = Object.entries(repositoryStatus.status || {});
-    const sourceSummary = providers.map(([name, state]) => "- " + name + ": " + state).join("\\n");
+    const sourceSummary = providers.map(([name, state]) => "- " + name + ": " + state).join("\n");
     const paperList = repositoryResults.length
       ? repositoryResults.slice(0, 20).map((paper, i) => {
           const year = paper.publishedDate ? String(paper.publishedDate).slice(0, 4) : "Year not supplied by source";
           return (i + 1) + ". " + paper.title +
-            "\\n   Authors: " + (paper.authors?.length ? paper.authors.join(", ") : "Not supplied by source") +
-            "\\n   Source: " + paper.provider +
-            "\\n   Year: " + year +
-            "\\n   Original record: " + paper.url +
-            (paper.doi ? "\\n   DOI: " + paper.doi : "\\n   DOI: not supplied by this source") +
-            (paper.snippet ? "\\n   Source summary: " + paper.snippet.slice(0, 280) : "");
-        }).join("\\n\\n")
+            "\n   Authors: " + (paper.authors?.length ? paper.authors.join(", ") : "Not supplied by source") +
+            "\n   Source: " + paper.provider +
+            "\n   Year: " + year +
+            "\n   Original record: " + paper.url +
+            (paper.doi ? "\n   DOI: " + paper.doi : "\\n   DOI: not supplied by this source") +
+            (paper.snippet ? "\n   Source summary: " + paper.snippet.slice(0, 280) : "");
+        }).join("\n\n")
       : "No papers were returned by the repository APIs in this attempt.";
     const crossrefLines = crossrefStatus.ok
       ? "Crossref DOI metadata lookup: completed; " + (crossrefStatus.records || []).length + " journal-article metadata records returned."
