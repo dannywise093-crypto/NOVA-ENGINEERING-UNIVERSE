@@ -130,12 +130,12 @@ function extractResearchTopic(query) {
   const raw = String(query || "").replace(/\s+/g, " ").trim();
   // Strip common task instructions so scholarly APIs receive the research topic, not the whole prompt.
   let topic = raw
-    .replace(/^\\s*(?:please\\s+)?(?:find|search for|identify|list|give me)\\s+(?:the\\s+)?(?:\\d+\\s+)?/i, "")
-    .replace(/\\b(?:recent|latest|peer[- ]reviewed|journal|papers?|studies|articles?)\\b/gi, " ")
-    .replace(/\\b(?:published|publication)\\s+(?:between|from|in)\\s+20\\d{2}(?:\\s*(?:and|to|[-–])\\s*20\\d{2})?\\b/gi, " ")
-    .split(/\\b(?:include|provide|with each|for each|return|cite)\\b/i)[0]
-    .replace(/\\s+/g, " ").replace(/^[\\s:,-]+|[\\s:,.!?-]+$/g, "").trim();
-  const onTopic = raw.match(/\\bon\\s+(.+?)(?:[.!?]\\s|\\binclude\\b|$)/i);
+    .replace(/^\s*(?:please\s+)?(?:find|search for|identify|list|give me)\s+(?:the\s+)?(?:\d+\s+)?/i, "")
+    .replace(/\b(?:recent|latest|peer[- ]reviewed|journal|papers?|studies|articles?)\b/gi, " ")
+    .replace(/\b(?:published|publication)\s+(?:between|from|in)\s+20\d{2}(?:\s*(?:and|to|[-–])\s*20\d{2})?\b/gi, " ")
+    .split(/\b(?:include|provide|with each|for each|return|cite)\b/i)[0]
+    .replace(/\s+/g, " ").replace(/^[\s:,-]+|[\s:,.!?-]+$/g, "").trim();
+  const onTopic = raw.match(/\bon\s+(.+?)(?:[.!?]\s|\binclude\b|$)/i);
   if (onTopic && onTopic[1].length > 12) topic = onTopic[1].trim();
   return (topic || raw).slice(0, 300);
 }
