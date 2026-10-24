@@ -260,7 +260,15 @@ async function crossrefLookup(query) {
       const p = item["published-online"]?.["date-parts"]?.[0] || item.published?.["date-parts"]?.[0] || item["published-print"]?.["date-parts"]?.[0] || [];
       const date = p.length >= 3 ? p.map((v,i)=>i===0?String(v):String(v).padStart(2,"0")).join("-") : p.length ? String(p[0]) : "";
       return { title: Array.isArray(item.title) ? item.title[0] : "", authors: Array.isArray(item.author) ? item.author.map(a => [a.given,a.family].filter(Boolean).join(" ")).filter(Boolean) : [], publicationDate: date, journal: Array.isArray(item["container-title"]) ? item["container-title"][0] : "", doi: item.DOI || "", doiUrl: item.DOI ? "https://doi.org/" + item.DOI : "", crossrefRecord: item.URL || "", type: item.type || "", score: Number(item.score || 0) };
-    }).filter(r => {\n      if (!r.title || !r.doi || !/^journal-article$/i.test(r.type)) return false;\n      const terms = topic.toLowerCase().match(/[a-z0-9]{4,}/g) || [];\n      const ignored = new Set(["deep","learning","based","using","find","recent","include","exact","title","authors","publication","year","journal","paper","papers","peer","reviewed","doi","official","publisher","short","summary","prioritize","exclude","unrelated","verify","metadata","between"]);\n      const keyTerms = [...new Set(terms.filter(t => !ignored.has(t)))];\n      const title = r.title.toLowerCase();\n      const matches = keyTerms.filter(t => title.includes(t)).length;\n      return keyTerms.length ? matches >= Math.min(2, keyTerms.length) : true;\n    });
+    }).filter(r => {
+      if (!r.title || !r.doi || !/^journal-article$/i.test(r.type)) return false;
+      const terms = topic.toLowerCase().match(/[a-z0-9]{4,}/g) || [];
+      const ignored = new Set(["deep","learning","based","using","find","recent","include","exact","title","authors","publication","year","journal","paper","papers","peer","reviewed","doi","official","publisher","short","summary","prioritize","exclude","unrelated","verify","metadata","between"]);
+      const keyTerms = [...new Set(terms.filter(t => !ignored.has(t)))];
+      const title = r.title.toLowerCase();
+      const matches = keyTerms.filter(t => title.includes(t)).length;
+      return keyTerms.length ? matches >= Math.min(2, keyTerms.length) : true;
+    });
     return { ok: true, records };
   } catch { return { ok: false, reason: "Crossref request failed or timed out", records: [] }; }
 }
