@@ -157,12 +157,14 @@ async function searchResearchRepositories(query) {
   };
   const escXml = s => String(s || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
   const results = [];
+  const rawCounts = { arXiv: 0, "Semantic Scholar": 0, PubMed: 0, OpenAlex: 0, "NASA Technical Reports Server": 0 };
   const status = {};
   const stopWords = new Set(["the","and","for","with","from","using","based","into","about","find","paper","papers","research","study","studies","latest","directly"]);
   const queryTerms = [...new Set(q.toLowerCase().match(/[a-z0-9]{3,}/g) || [])].filter(word => !stopWords.has(word));
   const queryMentionsBridge = /\bbridges?\b/i.test(q);
   const add = (provider, title, url, snippet = "", date = "", doi = "", authors = []) => {
     if (!title || !url || !/^https?:\/\//i.test(url)) return;
+    if (Object.prototype.hasOwnProperty.call(rawCounts, provider)) rawCounts[provider]++;
     const searchable = (String(title) + " " + String(snippet || "")).toLowerCase();
     const matchedTerms = queryTerms.filter(term => searchable.includes(term)).length;
     // Reject obviously unrelated search hits instead of presenting them as research candidates.
@@ -243,7 +245,7 @@ async function searchResearchRepositories(query) {
     if (status[statusKey] === "success") status[statusKey] = count ? "success (" + count + " results)" : "no results";
     else if (status[statusKey] === "partial") status[statusKey] = "partial (" + count + " results)";
   }
-  return { results: results.slice(0, 20), status };
+  return { results: results.slice(0, 20), status, rawCounts, relevantCounts: Object.fromEntries(Object.keys(rawCounts).map(provider => [provider, results.filter(r => r.provider === provider).length])) };
 }
 
 async function crossrefLookup(query) {
@@ -297,15 +299,11 @@ function formatSearchContext(results) {
     const repoSearch = await searchResearchRepositories(latestUserQuery);
     repositoryResults = repoSearch.results;
     repositoryStatus.status = repoSearch.status;
+    repositoryStatus.rawCounts = repoSearch.rawCounts;
+    repositoryStatus.relevantCounts = repoSearch.relevantCounts;
     searchResults.push(...repositoryResults);
     crossrefStatus = { attempted: true, ...(await crossrefLookup(latestUserQuery)) };
-    for (const rec of crossrefStatus.records || []) {
-      if (!searchResults.some(r => r.url === rec.doiUrl)) searchResults.push({
-        title: rec.title, url: rec.doiUrl,
-        snippet: "Crossref metadata. Authors: " + rec.authors.join(", ") + ". Journal: " + rec.journal + ". Publication date: " + rec.publicationDate + ".",
-        publishedDate: rec.publicationDate, provider: "Crossref DOI metadata", doi: rec.doi, verifiedMetadata: true
-      });
-    }
+    // Crossref records are metadata-verification evidence only; never add them as research candidates.
   }
   // Formula Design uses only the named official scholarly/technical APIs for research discovery. No general web search engine is used.
   if (searchResults.length) conversation[conversation.length - 1].content += formatSearchContext(searchResults);
@@ -314,7 +312,7 @@ function formatSearchContext(results) {
       webSearchAttempted: needsLiveSearch(searchQuery), webResultCount: searchResults.filter(r => r.provider !== "Crossref DOI metadata").length,
       webProviders: [...new Set(searchResults.map(r => r.provider))], crossrefAttempted: crossrefStatus.attempted,
       crossrefSucceeded: crossrefStatus.ok, crossrefRecordCount: (crossrefStatus.records || []).length,
-      crossrefFailure: crossrefStatus.reason || null, repositorySearchAttempted: repositoryStatus.attempted, repositoryStatus: repositoryStatus.status, repositoryResultCount: repositoryResults.length, repositoryProviders: [...new Set(repositoryResults.map(r => r.provider))], repositoryRecords: repositoryResults.slice(0, 15), crossrefRecords: (crossrefStatus.records || []).slice(0, 8)
+      crossrefFailure: crossrefStatus.reason || null, repositorySearchAttempted: repositoryStatus.attempted, repositoryStatus: repositoryStatus.status, repositoryResultCount: repositoryResults.length, repositoryProviders: [...new Set(repositoryResults.map(r => r.provider))], repositoryRawCounts: repositoryStatus.rawCounts || {}, repositoryRelevantCounts: repositoryStatus.relevantCounts || {}, repositoryRecords: repositoryResults.slice(0, 15), crossrefRecords: (crossrefStatus.records || []).slice(0, 8)
     }) + "\nOnly claim a provider was queried if the status confirms it. Crossref records verify bibliographic metadata as recorded by Crossref; they do NOT independently establish peer-review status or prove findings. Match title, topic, year, journal-article type, DOI, authors and dates. If evidence is weak, label it candidate/unverified. Never invent details to reach a target count. If providers failed, say which layer failed.";
   } else if (!searchResults.length && needsLiveSearch(searchQuery)) {
     conversation[conversation.length - 1].content += "\n\nLIVE SEARCH STATUS: No usable web results were retrieved. Do not claim a comprehensive search or invent sources. State that live search returned no usable results.";
