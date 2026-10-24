@@ -127,7 +127,7 @@ async function liveWebSearch(query, env) {
 }
 
 function extractResearchTopic(query) {
-  const raw = String(query || "").replace(/\\s+/g, " ").trim();
+  const raw = String(query || "").replace(/\s+/g, " ").trim();
   // Strip common task instructions so scholarly APIs receive the research topic, not the whole prompt.
   let topic = raw
     .replace(/^\\s*(?:please\\s+)?(?:find|search for|identify|list|give me)\\s+(?:the\\s+)?(?:\\d+\\s+)?/i, "")
