@@ -300,6 +300,27 @@ Create a useful preliminary concept from the user's request. Supported primitive
     if (result.error) result.fallbackError = cloudflareError;
   }
   if (searchResults.length) result.sources = searchResults.map(({title,url,publishedDate,provider}) => ({title,url,...(publishedDate ? {publishedDate} : {}),provider: provider || "DuckDuckGo"}));
+  if (result.error && isResearchQuery && (searchResults.length || crossrefStatus.attempted)) {
+    const papers = searchResults.slice(0, 20).map((paper, i) => {
+      const year = paper.publishedDate ? String(paper.publishedDate).slice(0, 4) : "Year not supplied by source";
+      return (i + 1) + ". " + paper.title +
+        "\\n   Source: " + (paper.provider || "Web search") +
+        "\\n   Year: " + year +
+        "\\n   Original record: " + paper.url +
+        (paper.doi ? "\\n   DOI: " + paper.doi : "\\n   DOI: not supplied in this result") +
+        (paper.snippet ? "\\n   Source summary: " + String(paper.snippet).slice(0, 260) : "");
+    }).join("\\n\\n");
+    const statuses = [
+      "General web search: " + (searchResults.some(r => r.provider !== "Crossref DOI metadata") ? "returned " + searchResults.filter(r => r.provider !== "Crossref DOI metadata").length + " usable results" : "returned no usable results"),
+      "Crossref: " + (!crossrefStatus.attempted ? "not queried" : crossrefStatus.ok ? "queried; " + (crossrefStatus.records || []).length + " journal-article metadata records" : "unavailable" + (crossrefStatus.reason ? " (" + crossrefStatus.reason + ")" : ""))
+    ].join("\\n");
+    return json({
+      answer: "The AI provider could not summarize this request, so NOVA is showing the source records retrieved directly instead. This is not a completed literature review.\\n\\nSEARCH STATUS\\n" + statuses + "\\n\\nRECORDS RETRIEVED\\n" + (papers || "No records were retrieved in this attempt.") + "\\n\\nVerify each original record before citing it. Search snippets and Crossref metadata do not independently establish peer-review status or validate a paper's findings. Missing authors, dates, or DOIs have not been inferred.",
+      code: result.code || "AI_PROVIDER_UNAVAILABLE",
+      sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Web search"})),
+      crossref: { attempted: crossrefStatus.attempted, ok: crossrefStatus.ok, reason: crossrefStatus.reason || null, recordCount: (crossrefStatus.records || []).length }
+    }, 200);
+  }
   if (result.error) return json(result, result.code === "RATE_LIMITED" ? 429 : 502);
   if (wantsScene) {
     const match = result.answer.match(/<eu-scene>\s*([\s\S]*?)\s*<\/eu-scene>/i);
