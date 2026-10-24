@@ -41,7 +41,9 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: "Request body must be valid JSON." }, 400); }
   const task = String(body.task || "").trim();
   const mode = String(body.mode || "calculate").slice(0, 80);
-  const identityText = [task, ...(Array.isArray(body.messages) ? body.messages.filter(m => m && m.role === "user" && typeof m.content === "string").map(m => m.content) : [])].join(" ");
+  // Check only the current turn for identity questions. Scanning the entire chat history makes the bot repeat the attribution sentence on every follow-up after the user has asked who created it.
+  const latestUserTurn = Array.isArray(body.messages) ? [...body.messages].reverse().find(m => m && m.role === "user" && typeof m.content === "string" && m.content.trim())?.content : "";
+  const identityText = task || latestUserTurn || "";
   if (isNovaAuthorshipQuestion(identityText)) {
     return json({ answer: NOVA_IDENTITY_ANSWER, assistant: "NOVA Engineering Universe AI", provider: "nova_identity_response" }, 200);
   }
