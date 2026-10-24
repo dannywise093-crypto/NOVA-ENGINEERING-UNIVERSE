@@ -77,9 +77,18 @@ module.exports = async function handler(req, res) {
     biomedical: "GROQ_API_KEY_7", software: "GROQ_API_KEY_7"
   };
   const keyVariable = body && body.assistant === "formula-design-ai" ? "GROQ_API_KEY_5" : keyVariableByDiscipline[discipline];
-  // Keep the assigned key primary; use the legacy shared key only as a migration fallback.
-  const key = process.env[keyVariable] || process.env.GROQ_API_KEY;
-  if (!key) return res.status(503).json({ error: keyVariable + " is not configured in the server's production environment. Add this variable for the selected engineering assistant (or configure GROQ_API_KEY as a shared fallback)." });
+  const provider = String(body && body.provider || "groq").toLowerCase();
+  const providerConfig = {
+    openai: { key: process.env.OPENAI_API_KEY, model: String(body.model || "gpt-4o-mini"), env: "OPENAI_API_KEY" },
+    anthropic: { key: process.env.ANTHROPIC_API_KEY, model: String(body.model || "claude-3-5-sonnet-latest"), env: "ANTHROPIC_API_KEY" },
+    gemini: { key: process.env.GEMINI_API_KEY, model: String(body.model || "gemini-1.5-flash"), env: "GEMINI_API_KEY" },
+    grok: { key: process.env.XAI_API_KEY, model: String(body.model || "grok-2-latest"), env: "XAI_API_KEY" },
+    groq: { key: process.env[keyVariable] || process.env.GROQ_API_KEY, model: process.env.GROQ_MODEL || "openai/gpt-oss-20b", env: keyVariable }
+  };
+  const selected = providerConfig[provider];
+  if (!selected) return res.status(400).json({ error: "Unsupported model provider. Choose OpenAI, Anthropic, Gemini, Grok, or Groq." });
+  if (!selected.key) return res.status(503).json({ error: selected.env + " is not configured in the server environment. Add it in your hosting provider's secret environment variables and redeploy." });
+  const key = selected.key;
   if (task.length < 8) return res.status(400).json({ error: "Please provide a more detailed engineering task (at least 8 characters)." });
   if (task.length > 8000) return res.status(413).json({ error: "Task is too long. Keep it under 8,000 characters." });
   const [role, focus] = PROFILES[discipline];
@@ -95,6 +104,44 @@ module.exports = async function handler(req, res) {
     ? "Create an actual multi-part 3D scene for this request: " + task + "\\nReturn the JSON object only."
     : "Discipline: " + discipline + "\\nRequested output style: " + (STYLES[style] || STYLES.research) + "\\nEngineering task:\\n" + task +
       (research ? "\\n\\nLIVE PUBLIC RESEARCH SEARCH (retrieved for this request):\\n" + (research.sources.length ? research.sources.map((s, i) => (i + 1) + ". " + s.title + (s.year ? " (" + s.year + ")" : "") + " — " + s.url + (s.venue ? " — " + s.venue : "") + (s.abstract ? " — Abstract/summary: " + s.abstract : "") + (s.openAccessUrl ? " — Open-access full-text link: " + s.openAccessUrl : "")).join("\\n") : "No usable records were returned from Crossref/OpenAlex for this query.") + "\\nResearch status: " + research.status + ". " + research.note + "\\nUse only relevant records, distinguish metadata from full-text verification, do not imply these sources prove a design works, and explicitly state when the evidence is insufficient. Never claim you physically tested a material or ran a simulation." : "");
+  if (provider !== "groq") {
+    try {
+      const messages = [{ role: "system", content: system }, { role: "user", content: user }];
+      let response, answer = "";
+      if (provider === "openai" || provider === "grok") {
+        const endpoint = provider === "openai" ? "https://api.openai.com/v1/chat/completions" : "https://api.x.ai/v1/chat/completions";
+        response = await fetch(endpoint, { method: "POST", headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" }, body: JSON.stringify({ model: selected.model, messages, temperature: 0.2, max_tokens: sceneMode ? 1800 : 3200 }), signal: AbortSignal.timeout(45000) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return res.status(502).json({ error: (provider === "openai" ? "OpenAI" : "xAI Grok") + " API request failed (HTTP " + response.status + "). Check model access and server logs." });
+        answer = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      } else if (provider === "anthropic") {
+        response = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" }, body: JSON.stringify({ model: selected.model, max_tokens: sceneMode ? 1800 : 3200, temperature: 0.2, system, messages: [{ role: "user", content: user }] }), signal: AbortSignal.timeout(45000) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return res.status(502).json({ error: "Anthropic Claude API request failed (HTTP " + response.status + "). Check model access and server logs." });
+        answer = (data.content || []).filter(x => x.type === "text").map(x => x.text || "").join("\\n");
+      } else if (provider === "gemini") {
+        const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(selected.model) + ":generateContent?key=" + encodeURIComponent(key);
+        response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], generationConfig: { temperature: 0.2, maxOutputTokens: sceneMode ? 1800 : 3200 } }), signal: AbortSignal.timeout(45000) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return res.status(502).json({ error: "Google Gemini API request failed (HTTP " + response.status + "). Check model access and server logs." });
+        answer = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || []).map(x => x.text || "").join("\\n");
+      }
+      if (Array.isArray(answer)) answer = answer.map(x => typeof x === "string" ? x : x.text || "").join("");
+      answer = typeof answer === "string" ? answer.trim() : "";
+      if (!answer) return res.status(502).json({ error: "The selected model returned no text. Try again or choose another provider." });
+      if (sceneMode) {
+        const scene = parseSceneAnswer(answer);
+        if (!scene) return res.status(502).json({ error: "The selected model returned invalid 3D scene JSON. Try again." });
+        return res.status(200).json({ role, discipline, answer, scene, model: selected.model, provider });
+      }
+      const scene = style === "design" ? parseSceneAnswer(answer) : null;
+      return res.status(200).json({ role, discipline, answer, ...(scene ? { scene } : {}), ...(research ? { research } : {}), model: selected.model, provider });
+    } catch (error) {
+      console.error("Selected AI provider request failed", JSON.stringify({ provider, message: error && error.message }));
+      return res.status(502).json({ error: "Could not connect to the selected AI provider. Check its API key, model access, quota, and deployment logs." });
+    }
+  }
+
   try {
     const endpoint = "https://api.groq.com/openai/v1/chat/completions";
     const primaryModel = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
