@@ -160,6 +160,7 @@ async function searchResearchRepositories(query) {
         const summary = escXml((entry.match(/<summary>([\s\S]*?)<\/summary>/i) || [])[1]);
         const date = ((entry.match(/<published>([^<]+)/i) || [])[1] || "").slice(0,10);
         const authors = [...entry.matchAll(/<author>\s*<name>([\s\S]*?)<\/name>\s*<\/author>/gi)].map(m => escXml(m[1]));
+        add("arXiv", title, url, summary, date, "", authors);
       }
     })(),
     (async () => {
@@ -193,7 +194,16 @@ async function searchResearchRepositories(query) {
       const r = await safeFetch("https://ntrs.nasa.gov/api/citations/search?q=" + enc + "&page.size=5&page=0&sort=-date");
       status.NASA_NTRS = r.ok ? "success" : "unavailable";
       if (!r.ok) return;
-      try { const data = JSON.parse(r.text); for (const item of data.results || data.hits || []) { const id = item.id || item._id; add("NASA Technical Reports Server", item.title, id ? "https://ntrs.nasa.gov/citations/" + id : item.url, item.abstract || item.description || "", item.publicationDate || item.issueDate || "", "", (item.authors || item.author || []).map(a => typeof a === "string" ? a : (a.name || [a.firstName, a.lastName].filter(Boolean).join(" "))).filter(Boolean)); } } catch {}
+      try {
+        const data = JSON.parse(r.text);
+        for (const item of data.results || data.hits || []) {
+          const id = item.id || item._id;
+          const rawAuthors = item.authors ?? item.author ?? [];
+          const authorList = Array.isArray(rawAuthors) ? rawAuthors : [rawAuthors];
+          const authors = authorList.map(a => typeof a === "string" ? a : (a && typeof a === "object" ? (a.name || [a.firstName, a.lastName].filter(Boolean).join(" ")) : "")).filter(Boolean);
+          add("NASA Technical Reports Server", item.title, id ? "https://ntrs.nasa.gov/citations/" + id : item.url, item.abstract || item.description || "", item.publicationDate || item.issueDate || "", "", authors);
+        }
+      } catch {}
     })()
   ]);
   const providerNames = {
