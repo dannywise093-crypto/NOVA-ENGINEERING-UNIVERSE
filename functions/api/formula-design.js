@@ -159,7 +159,7 @@ async function searchResearchRepositories(query) {
         const url = ((entry.match(/<id>([\s\S]*?)<\/id>/i) || [])[1] || "").trim();
         const summary = escXml((entry.match(/<summary>([\s\S]*?)<\/summary>/i) || [])[1]);
         const date = ((entry.match(/<published>([^<]+)/i) || [])[1] || "").slice(0,10);
-        const authors = [...entry.matchAll(/<author>\\s*<name>([\\s\\S]*?)<\\/name>\\s*<\\/author>/gi)].map(m => escXml(m[1]));\n        add("arXiv", title, url, summary, date, "", authors);
+        const authors = [...entry.matchAll(/<author>\s*<name>([\s\S]*?)<\/name>\s*<\/author>/gi)].map(m => escXml(m[1]));
       }
     })(),
     (async () => {
@@ -332,6 +332,7 @@ function formatSearchContext(results) {
       ? repositoryResults.slice(0, 20).map((paper, i) => {
           const year = paper.publishedDate ? String(paper.publishedDate).slice(0, 4) : "Year not supplied by source";
           return (i + 1) + ". " + paper.title +
+            "\\n   Authors: " + (paper.authors?.length ? paper.authors.join(", ") : "Not supplied by source") +
             "\\n   Source: " + paper.provider +
             "\\n   Year: " + year +
             "\\n   Original record: " + paper.url +
