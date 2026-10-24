@@ -144,10 +144,10 @@ async function searchResearchRepositories(query) {
   const escXml = s => String(s || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
   const results = [];
   const status = {};
-  const add = (provider, title, url, snippet = "", date = "", doi = "") => {
+  const add = (provider, title, url, snippet = "", date = "", doi = "", authors = []) => {
     if (!title || !url || !/^https?:\/\//i.test(url)) return;
     if (results.some(r => r.url === url || (doi && r.doi && r.doi.toLowerCase() === doi.toLowerCase()))) return;
-    results.push({ provider, title: String(title).slice(0, 240), url, snippet: String(snippet || "").slice(0, 500), ...(date ? { publishedDate: date } : {}), ...(doi ? { doi } : {}) });
+    results.push({ provider, title: String(title).slice(0, 240), url, snippet: String(snippet || "").slice(0, 500), ...(date ? { publishedDate: date } : {}), ...(doi ? { doi } : {}), ...(Array.isArray(authors) && authors.length ? { authors: authors.map(a => String(a).slice(0, 120)).slice(0, 12) } : {}) });
   };
   const tasks = await Promise.all([
     (async () => {
@@ -159,14 +159,14 @@ async function searchResearchRepositories(query) {
         const url = ((entry.match(/<id>([\s\S]*?)<\/id>/i) || [])[1] || "").trim();
         const summary = escXml((entry.match(/<summary>([\s\S]*?)<\/summary>/i) || [])[1]);
         const date = ((entry.match(/<published>([^<]+)/i) || [])[1] || "").slice(0,10);
-        add("arXiv", title, url, summary, date);
+        const authors = [...entry.matchAll(/<author>\\s*<name>([\\s\\S]*?)<\\/name>\\s*<\\/author>/gi)].map(m => escXml(m[1]));\n        add("arXiv", title, url, summary, date, "", authors);
       }
     })(),
     (async () => {
       const r = await safeFetch("https://api.semanticscholar.org/graph/v1/paper/search?query=" + enc + "&limit=5&fields=title,year,authors,abstract,url,externalIds,publicationDate");
       status.SemanticScholar = r.ok ? "success" : "unavailable";
       if (!r.ok) return;
-      try { for (const p of JSON.parse(r.text).data || []) add("Semantic Scholar", p.title, p.url || (p.paperId ? "https://www.semanticscholar.org/paper/" + p.paperId : ""), p.abstract || "", p.publicationDate || (p.year ? String(p.year) : ""), p.externalIds?.DOI || ""); } catch {}
+      try { for (const p of JSON.parse(r.text).data || []) add("Semantic Scholar", p.title, p.url || (p.paperId ? "https://www.semanticscholar.org/paper/" + p.paperId : ""), p.abstract || "", p.publicationDate || (p.year ? String(p.year) : ""), p.externalIds?.DOI || "", (p.authors || []).map(a => a.name).filter(Boolean)); } catch {}
     })(),
     (async () => {
       const base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
@@ -180,20 +180,20 @@ async function searchResearchRepositories(query) {
       if (!sm.ok) { status.PubMed = "partial"; return; }
       try {
         const data = JSON.parse(sm.text).result || {};
-        for (const id of ids) { const p = data[id]; if (p && p.uid) add("PubMed", p.title, "https://pubmed.ncbi.nlm.nih.gov/" + id + "/", [p.fulljournalname, p.pubdate].filter(Boolean).join(". "), p.pubdate || "", p.elocationid?.startsWith("doi:") ? p.elocationid.slice(4) : ""); }
+        for (const id of ids) { const p = data[id]; if (p && p.uid) add("PubMed", p.title, "https://pubmed.ncbi.nlm.nih.gov/" + id + "/", [p.fulljournalname, p.pubdate].filter(Boolean).join(". "), p.pubdate || "", p.elocationid?.startsWith("doi:") ? p.elocationid.slice(4) : "", (p.authors || []).map(a => a.name).filter(Boolean)); }
       } catch {}
     })(),
     (async () => {
       const r = await safeFetch("https://api.openalex.org/works?search=" + enc + "&per-page=5&select=id,doi,title,publication_year,authorships,primary_location,biblio");
       status.OpenAlex = r.ok ? "success" : "unavailable";
       if (!r.ok) return;
-      try { for (const w of JSON.parse(r.text).results || []) add("OpenAlex", w.title, w.doi || w.id, (w.authorships || []).slice(0,4).map(a => a.author?.display_name).filter(Boolean).join(", "), w.publication_year ? String(w.publication_year) : "", w.doi || ""); } catch {}
+      try { for (const w of JSON.parse(r.text).results || []) add("OpenAlex", w.title, w.doi || w.id, "", w.publication_year ? String(w.publication_year) : "", w.doi || "", (w.authorships || []).map(a => a.author?.display_name).filter(Boolean)); } catch {}
     })(),
     (async () => {
       const r = await safeFetch("https://ntrs.nasa.gov/api/citations/search?q=" + enc + "&page.size=5&page=0&sort=-date");
       status.NASA_NTRS = r.ok ? "success" : "unavailable";
       if (!r.ok) return;
-      try { const data = JSON.parse(r.text); for (const item of data.results || data.hits || []) { const id = item.id || item._id; add("NASA Technical Reports Server", item.title, id ? "https://ntrs.nasa.gov/citations/" + id : item.url, item.abstract || item.description || "", item.publicationDate || item.issueDate || ""); } } catch {}
+      try { const data = JSON.parse(r.text); for (const item of data.results || data.hits || []) { const id = item.id || item._id; add("NASA Technical Reports Server", item.title, id ? "https://ntrs.nasa.gov/citations/" + id : item.url, item.abstract || item.description || "", item.publicationDate || item.issueDate || "", "", (item.authors || item.author || []).map(a => typeof a === "string" ? a : (a.name || [a.firstName, a.lastName].filter(Boolean).join(" "))).filter(Boolean)); } } catch {}
     })()
   ]);
   const providerNames = {
