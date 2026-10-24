@@ -196,6 +196,18 @@ async function searchResearchRepositories(query) {
       try { const data = JSON.parse(r.text); for (const item of data.results || data.hits || []) { const id = item.id || item._id; add("NASA Technical Reports Server", item.title, id ? "https://ntrs.nasa.gov/citations/" + id : item.url, item.abstract || item.description || "", item.publicationDate || item.issueDate || ""); } } catch {}
     })()
   ]);
+  const providerNames = {
+    arXiv: "arXiv",
+    "Semantic Scholar": "SemanticScholar",
+    PubMed: "PubMed",
+    OpenAlex: "OpenAlex",
+    "NASA Technical Reports Server": "NASA_NTRS"
+  };
+  for (const [provider, statusKey] of Object.entries(providerNames)) {
+    const count = results.filter(r => r.provider === provider).length;
+    if (status[statusKey] === "success") status[statusKey] = count ? "success (" + count + " results)" : "no results";
+    else if (status[statusKey] === "partial") status[statusKey] = "partial (" + count + " results)";
+  }
   return { results: results.slice(0, 20), status };
 }
 
@@ -313,6 +325,33 @@ function formatSearchContext(results) {
   }
   const fallback = await askCloudflareAI(env, conversation, "Engineering Formula & Design AI");
   if (!fallback.error) return json({ ...fallback, sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Research repository"})), researchRepositories: repositoryStatus }, 200);
+  if (rateLimitFailure && isResearchQuery) {
+    const providers = Object.entries(repositoryStatus.status || {});
+    const sourceSummary = providers.map(([name, state]) => "- " + name + ": " + state).join("\\n");
+    const paperList = repositoryResults.length
+      ? repositoryResults.slice(0, 20).map((paper, i) => {
+          const year = paper.publishedDate ? String(paper.publishedDate).slice(0, 4) : "Year not supplied by source";
+          return (i + 1) + ". " + paper.title +
+            "\\n   Source: " + paper.provider +
+            "\\n   Year: " + year +
+            "\\n   Original record: " + paper.url +
+            (paper.doi ? "\\n   DOI: " + paper.doi : "\\n   DOI: not supplied by this source") +
+            (paper.snippet ? "\\n   Source summary: " + paper.snippet.slice(0, 280) : "");
+        }).join("\\n\\n")
+      : "No papers were returned by the repository APIs in this attempt.";
+    const crossrefLines = crossrefStatus.ok
+      ? "Crossref DOI metadata lookup: completed; " + (crossrefStatus.records || []).length + " journal-article metadata records returned."
+      : "Crossref DOI metadata lookup: failed or unavailable" + (crossrefStatus.reason ? " (" + crossrefStatus.reason + ")" : "") + ".";
+    return json({
+      answer: "The AI summarizer is currently rate-limited, so this is a direct repository report rather than an AI-written literature review.\n\nREPOSITORY STATUS\n" + (sourceSummary || "No repository status was returned.") + "\n\nPAPERS RETURNED\n" + paperList + "\n\nDOI VERIFICATION\n" + crossrefLines + "\n\nImportant: repository search results are candidates, not proof that a paper is peer-reviewed or directly relevant. Verify the original record before citing it. Missing authors or dates are not inferred.",
+      code: rateLimitFailure.code,
+      retryAfter: rateLimitFailure.retryAfter,
+      limitType: rateLimitFailure.limitType,
+      sources: searchResults.map(({title,url,publishedDate,provider,doi}) => ({title,url,...(publishedDate ? {publishedDate} : {}),...(doi ? {doi} : {}),provider: provider || "Research repository"})),
+      researchRepositories: repositoryStatus,
+      crossref: { attempted: crossrefStatus.attempted, ok: crossrefStatus.ok, reason: crossrefStatus.reason || null, recordCount: (crossrefStatus.records || []).length }
+    }, 200);
+  }
   if (rateLimitFailure) return json({ ...rateLimitFailure, fallbackError: fallback.error }, 429);
   return json({ error: lastError, fallbackError: fallback.error }, keys.length ? 502 : 503);
 }
