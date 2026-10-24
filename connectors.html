@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09090f">
+<title>Connector Hub | NOVA Engineering Universe</title>
+<style>
+:root{color-scheme:dark;--bg:#09090f;--panel:#15151f;--line:#353546;--text:#f5f0ff;--muted:#b5b3c8;--accent:#9c8cff;--ok:#7ce7b2;--warn:#ffce85}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#26204d 0,transparent 45%),var(--bg);color:var(--text);font:16px/1.55 system-ui,sans-serif}
+main{width:min(1000px,92%);margin:32px auto 60px}a{color:#c7bcff}header{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}h1{font-size:clamp(28px,5vw,44px);margin:14px 0 4px}p{color:var(--muted)}.panel{background:#15151feF;border:1px solid var(--line);border-radius:18px;padding:22px;margin:20px 0;box-shadow:0 18px 60px #0003}.tag{display:inline-block;border:1px solid var(--line);padding:4px 9px;border-radius:20px;color:#d9d1ff;font-size:12px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}button{background:var(--accent);color:#100c20;border:0;border-radius:10px;padding:11px 15px;font-weight:700;cursor:pointer}button.secondary{background:#28283a;color:var(--text);border:1px solid var(--line)}button:disabled{opacity:.55;cursor:wait}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#08080e;border:1px solid var(--line);border-radius:12px;padding:14px;color:#e6e1ff;max-height:440px;overflow:auto}.status{padding:12px;border-radius:10px;background:#0c0c14;border:1px solid var(--line);margin-top:14px}.ok{color:var(--ok)}.warn{color:var(--warn)}ul{color:var(--muted)}code{overflow-wrap:anywhere}
+</style>
+</head>
+<body><main>
+<header><a href="formula-design-ai.html">← Back to Formula AI</a><span class="tag">NOVA CONNECTOR HUB · PREVIEW</span></header>
+<h1>Connect your engineering tools</h1>
+<p>Connect external services to NOVA through controlled, server-side adapters. Credentials stay in Cloudflare secrets and are never sent to the browser.</p>
+<section class="panel">
+<h2>Google Compute Engine</h2><span class="tag">Read-only · First connector</span>
+<p>Securely test access and inspect virtual machine instances in your configured Google Cloud project. This connector does not create, stop, delete, or modify resources.</p>
+<div class="row"><button id="statusBtn" class="secondary">Check configuration</button><button id="testBtn">Test Google connection</button><button id="listBtn" class="secondary">List instances</button></div>
+<div id="status" class="status" role="status">Checking connector status…</div>
+<pre id="output" aria-live="polite">No connector request has run yet.</pre>
+</section>
+<section class="panel">
+<h2>Setup required</h2>
+<ol>
+<li>In Google Cloud, create a dedicated service account and grant only the read-only permissions needed to view Compute Engine instances (for example, a suitable Compute Viewer role).</li>
+<li>Download its JSON key securely. Never paste the key into this page, a chat, or source code.</li>
+<li>In Cloudflare Pages → <strong>nova-engineering-universe</strong> → Settings → Variables and Secrets, add:
+<ul><li><code>GCE_SERVICE_ACCOUNT_JSON</code> — the full service-account JSON as a secret</li><li><code>GCE_PROJECT_ID</code> — the Google Cloud project ID</li></ul>
+<li>Enable the Compute Engine API in the Google Cloud project, then redeploy so the function receives the new variables.</li>
+</ol>
+<p class="warn">Use a dedicated service account with least-privilege access. Keep its key private and rotate it if exposed. This initial connector is read-only.</p>
+</section>
+<section class="panel"><h2>Connector roadmap</h2><p>The adapter pattern can be extended to services such as Google Cloud Storage, BigQuery, GitHub, databases, and internal engineering APIs. Each service needs its own authentication method, allowed actions, and permission checks; “any service” cannot be safely connected through one unrestricted URL/token field.</p></section>
+</main>
+<script>
+const statusEl=document.getElementById("status"),output=document.getElementById("output");
+async function run(action){
+  const buttons=[document.getElementById("statusBtn"),document.getElementById("testBtn"),document.getElementById("listBtn")];
+  buttons.forEach(b=>b.disabled=true);statusEl.textContent="Working…";output.textContent="Contacting the NOVA connector endpoint…";
+  try{
+    let response,data;
+    if(action==="status"){response=await fetch("/api/connectors?action=status",{cache:"no-store"});data=await response.json();}
+    else{response=await fetch("/api/connectors",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({provider:"google-compute-engine",action}),cache:"no-store"});data=await response.json();}
+    if(!response.ok||data.ok===false){statusEl.innerHTML='<span class="warn">Not connected</span> — '+(data.error||"Connector request failed.");output.textContent=JSON.stringify(data,null,2);return;}
+    statusEl.innerHTML='<span class="ok">✓ '+(data.configured===false?"Setup required":"Request succeeded")+'</span> — '+(data.message||data.note||"Connector status loaded.");
+    output.textContent=JSON.stringify(data,null,2);
+  }catch(e){statusEl.textContent="Unable to reach the connector endpoint.";output.textContent=String(e);}
+  finally{buttons.forEach(b=>b.disabled=false);}
+}
+document.getElementById("statusBtn").addEventListener("click",()=>run("status"));
+document.getElementById("testBtn").addEventListener("click",()=>run("test"));
+document.getElementById("listBtn").addEventListener("click",()=>run("list-instances"));
+run("status");
+</script></body></html>
