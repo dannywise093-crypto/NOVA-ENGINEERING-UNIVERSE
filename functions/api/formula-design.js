@@ -154,10 +154,10 @@ async function searchResearchRepositories(query) {
       const r = await safeFetch("https://export.arxiv.org/api/query?search_query=all:" + enc + "&start=0&max_results=5");
       status.arXiv = r.ok ? "success" : "unavailable";
       if (!r.ok) return;
-      for (const entry of (r.text.match(/<entry>[\s\\S]*?<\/entry>/gi) || [])) {
-        const title = escXml((entry.match(/<title>([\s\\S]*?)<\/title>/i) || [])[1]);
-        const url = ((entry.match(/<id>([\s\\S]*?)<\/id>/i) || [])[1] || "").trim();
-        const summary = escXml((entry.match(/<summary>([\s\\S]*?)<\/summary>/i) || [])[1]);
+      for (const entry of (r.text.match(/<entry>[\s\S]*?<\/entry>/gi) || [])) {
+        const title = escXml((entry.match(/<title>([\s\S]*?)<\/title>/i) || [])[1]);
+        const url = ((entry.match(/<id>([\s\S]*?)<\/id>/i) || [])[1] || "").trim();
+        const summary = escXml((entry.match(/<summary>([\s\S]*?)<\/summary>/i) || [])[1]);
         const date = ((entry.match(/<published>([^<]+)/i) || [])[1] || "").slice(0,10);
         add("arXiv", title, url, summary, date);
       }
