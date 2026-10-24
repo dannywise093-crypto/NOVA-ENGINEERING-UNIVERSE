@@ -80,9 +80,9 @@ module.exports = async function handler(req, res) {
   const provider = String(body && body.provider || "groq").toLowerCase();
   const providerConfig = {
     openai: { key: process.env.OPENAI_API_KEY, model: String(body.model || "gpt-4o-mini"), env: "OPENAI_API_KEY" },
-    anthropic: { key: process.env.ANTHROPIC_API_KEY, model: String(body.model || "claude-3-5-sonnet-latest"), env: "ANTHROPIC_API_KEY" },
-    gemini: { key: process.env.GEMINI_API_KEY, model: String(body.model || "gemini-1.5-flash"), env: "GEMINI_API_KEY" },
-    grok: { key: process.env.XAI_API_KEY, model: String(body.model || "grok-2-latest"), env: "XAI_API_KEY" },
+    anthropic: { key: process.env.ANTHROPIC_API_KEY, model: String(body.model || "claude-sonnet-4-20250514"), env: "ANTHROPIC_API_KEY" },
+    gemini: { key: process.env.GEMINI_API_KEY, model: String(body.model || "gemini-2.5-flash"), env: "GEMINI_API_KEY" },
+    grok: { key: process.env.XAI_API_KEY, model: String(body.model || "grok-3-mini"), env: "XAI_API_KEY" },
     groq: { key: process.env[keyVariable] || process.env.GROQ_API_KEY, model: process.env.GROQ_MODEL || "openai/gpt-oss-20b", env: keyVariable }
   };
   const selected = providerConfig[provider];
@@ -120,8 +120,8 @@ module.exports = async function handler(req, res) {
         if (!response.ok) return res.status(502).json({ error: "Anthropic Claude API request failed (HTTP " + response.status + "). Check model access and server logs." });
         answer = (data.content || []).filter(x => x.type === "text").map(x => x.text || "").join("\\n");
       } else if (provider === "gemini") {
-        const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(selected.model) + ":generateContent?key=" + encodeURIComponent(key);
-        response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], generationConfig: { temperature: 0.2, maxOutputTokens: sceneMode ? 1800 : 3200 } }), signal: AbortSignal.timeout(45000) });
+        const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(selected.model) + ":generateContent";
+        response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key }, body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], generationConfig: { temperature: 0.2, maxOutputTokens: sceneMode ? 1800 : 3200 } }), signal: AbortSignal.timeout(45000) });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) return res.status(502).json({ error: "Google Gemini API request failed (HTTP " + response.status + "). Check model access and server logs." });
         answer = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || []).map(x => x.text || "").join("\\n");
