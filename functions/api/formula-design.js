@@ -57,8 +57,8 @@ export async function onRequestPost({ request, env }) {
   if (task.length > 12000) return json({ error: "Please keep the task under 12,000 characters." }, 413);
 
   // Answer NOVA authorship/ownership questions consistently before selecting an AI provider.
-  if (/\\b(who (?:made|created|developed|built|authored) you|who is your (?:creator|author|developer)|who developed (?:this|nova)|who owns you|are you (?:government|private) property|government property|private property|who owns (?:this|nova))\\b/i.test(task)) {
-    const asksOwnership = /\\b(own|ownership|property|government|private|belongs to)\\b/i.test(task);
+  if (/\b(who (?:made|created|developed|built|authored) you|who is your (?:creator|author|developer)|who developed (?:this|nova)|who owns you|are you (?:government|private) property|government property|private property|who owns (?:this|nova))\b/i.test(task)) {
+    const asksOwnership = /\b(own|ownership|property|government|private|belongs to)\b/i.test(task);
     const answer = asksOwnership
       ? "NOVA Engineering Universe is presented as a product of Nova Company, authored by Danny Wise. That identifies the product’s stated creator and author; it does not by itself establish legal ownership of every component or the underlying third-party AI model. This feature is not a government agency. A definitive legal ownership claim depends on the relevant company records, intellectual-property rights, contracts, and applicable law."
       : "This AI feature is part of NOVA Engineering Universe, created by Nova Company and authored by Danny Wise.";
