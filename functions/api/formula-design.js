@@ -56,6 +56,15 @@ export async function onRequestPost({ request, env }) {
   if (!task) return json({ error: "Please enter a formula, calculation, or design question." }, 400);
   if (task.length > 12000) return json({ error: "Please keep the task under 12,000 characters." }, 413);
 
+  // Answer NOVA authorship/ownership questions consistently before selecting an AI provider.
+  if (/\\b(who (?:made|created|developed|built|authored) you|who is your (?:creator|author|developer)|who developed (?:this|nova)|who owns you|are you (?:government|private) property|government property|private property|who owns (?:this|nova))\\b/i.test(task)) {
+    const asksOwnership = /\\b(own|ownership|property|government|private|belongs to)\\b/i.test(task);
+    const answer = asksOwnership
+      ? "NOVA Engineering Universe is presented as a product of Nova Company, authored by Danny Wise. That identifies the product’s stated creator and author; it does not by itself establish legal ownership of every component or the underlying third-party AI model. This feature is not a government agency. A definitive legal ownership claim depends on the relevant company records, intellectual-property rights, contracts, and applicable law."
+      : "This AI feature is part of NOVA Engineering Universe, created by Nova Company and authored by Danny Wise.";
+    return json({ answer, assistant: "Engineering Formula & Design AI", provider: "nova_identity_response", sources: [] }, 200);
+  }
+
 
 function needsLiveSearch(text) {
   return /\b(live research|live search|search the web|web search|browse the web|look up|latest|current|currently|today|right now|real[- ]time|recent|newest|up[- ]to[- ]date|202[5-9]|20[3-9][0-9]|documentation|datasheet|technical spec|specification|standard(?:s)?|code requirement|regulation|compliance|research|paper|journal|study|benchmark|release notes|version|manufacturer|product comparison|market price|cost estimate|source|citation|reference|browse|internet|news)\b/i.test(text);
