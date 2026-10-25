@@ -301,6 +301,31 @@ function formatSearchContext(results) {
   const meaningfulUserMessage = [...conversation].reverse().find(m => m.role === "user" && m.content.trim().length > 20 && !/^(continue|retry|try again|go on|proceed)$/i.test(m.content.trim()));
   const latestUserQueryRaw = meaningfulUserMessage?.content || task;
   const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
+
+  // Handle product-identity questions directly so the model cannot loop the creator statement
+  // when the user asks a follow-up about government/private ownership.
+  const identityText = latestUserQuery.toLowerCase();
+  const asksCreator = /\\b(who (?:created|developed|made|built) you|who (?:is|are) (?:your|the) (?:creator|developer|author)|who made (?:this|nova)|who developed (?:this|nova)|who is behind (?:this|nova))\\b/.test(identityText);
+  const asksOwnership = /\\b(government|govt|state[- ]owned|public property|private property|owned by|ownership|property of|government property|government owned|private company|is it private|are you private|belong to)\\b/.test(identityText)
+    && /\\b(you|this|nova|company|property|owned|ownership|government|private|belong)\\b/.test(identityText);
+  if (asksOwnership) {
+    return json({
+      answer: "NOVA Engineering Universe is presented as a product of Nova Company and authored by Danny Wise, not as a government service. That describes the product’s stated origin; legal ownership of its code, brand, or other intellectual property depends on the applicable rights and agreements. The underlying AI model or hosting may be supplied by third-party services.",
+      assistant: "Engineering Formula & Design AI",
+      provider: "nova_identity_response",
+      sources: [],
+      researchRepositories: { attempted: false, status: {} }
+    }, 200);
+  }
+  if (asksCreator) {
+    return json({
+      answer: "This AI feature is part of NOVA Engineering Universe, created by Nova Company and authored by Danny Wise. The underlying AI model or hosting may be provided by third-party services.",
+      assistant: "Engineering Formula & Design AI",
+      provider: "nova_identity_response",
+      sources: [],
+      researchRepositories: { attempted: false, status: {} }
+    }, 200);
+  }
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
   const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
   let repositoryStatus = { attempted: false, status: {} };
