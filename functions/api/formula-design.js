@@ -29,12 +29,17 @@ async function askCloudflareAI(env, messages, assistantName) {
   }
 }
 
-function isNovaAuthorshipQuestion(text) {
+function novaQuestionType(text) {
   const s = String(text || "").toLowerCase().replace(/[^a-z0-9\s'-]/g, " ").replace(/\s+/g, " ").trim();
-  return /\b(who (?:made|created|developed|built|authored|owns|is behind) (?:you|this ai|this feature|nova|formula ai)|who (?:is|are) (?:your|the) (?:creator|developer|author|owner)|who developed you|who created you|who made you|who is your developer|who is your creator|who owns you|are you (?:government|public|private) property|is this (?:government|public|private) property|are you owned by (?:the )?government|is nova (?:a )?government (?:project|property)|what company created you|what is your origin)\b/.test(s);
+  const ownership = /\b(government|govt|public property|private property|owned by|ownership|property of|government property|government owned|private company|is it private|are you private|belong to|state owned)\b/.test(s)
+    && /\b(you|this|nova|company|property|owned|ownership|government|private|belong)\b/.test(s);
+  if (ownership) return "ownership";
+  const creator = /\b(who (?:made|created|developed|built|authored|is behind) (?:you|this ai|this feature|nova|formula ai)|who (?:is|are) (?:your|the) (?:creator|developer|author)|who developed you|who created you|who made you|who is your developer|who is your creator|what company created you|what is your origin)\b/.test(s);
+  return creator ? "creator" : "";
 }
 
 const NOVA_IDENTITY_ANSWER = "This AI feature is part of NOVA Engineering Universe, created by Nova Company and authored by Danny Wise.";
+const NOVA_OWNERSHIP_ANSWER = "NOVA Engineering Universe is presented as a product of Nova Company and authored by Danny Wise, not as a government service. That describes the product's stated origin; legal ownership of its code, brand, or other intellectual property depends on applicable rights and agreements. The underlying AI model or hosting may be supplied by third-party services.";
 
 export async function onRequestPost({ request, env }) {
   let body;
@@ -44,8 +49,9 @@ export async function onRequestPost({ request, env }) {
   // Check only the current turn for identity questions. Scanning the entire chat history makes the bot repeat the attribution sentence on every follow-up after the user has asked who created it.
   const latestUserTurn = Array.isArray(body.messages) ? [...body.messages].reverse().find(m => m && m.role === "user" && typeof m.content === "string" && m.content.trim())?.content : "";
   const identityText = task || latestUserTurn || "";
-  if (isNovaAuthorshipQuestion(identityText)) {
-    return json({ answer: NOVA_IDENTITY_ANSWER, assistant: "NOVA Engineering Universe AI", provider: "nova_identity_response" }, 200);
+  const novaQuestion = novaQuestionType(identityText);
+  if (novaQuestion) {
+    return json({ answer: novaQuestion === "ownership" ? NOVA_OWNERSHIP_ANSWER : NOVA_IDENTITY_ANSWER, assistant: "NOVA Engineering Universe AI", provider: "nova_identity_response" }, 200);
   }
   if (!task) return json({ error: "Please enter a formula, calculation, or design question." }, 400);
   if (task.length > 12000) return json({ error: "Please keep the task under 12,000 characters." }, 413);
@@ -302,30 +308,6 @@ function formatSearchContext(results) {
   const latestUserQueryRaw = meaningfulUserMessage?.content || task;
   const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
 
-  // Handle product-identity questions directly so the model cannot loop the creator statement
-  // when the user asks a follow-up about government/private ownership.
-  const identityText = latestUserQuery.toLowerCase();
-  const asksCreator = /\\b(who (?:created|developed|made|built) you|who (?:is|are) (?:your|the) (?:creator|developer|author)|who made (?:this|nova)|who developed (?:this|nova)|who is behind (?:this|nova))\\b/.test(identityText);
-  const asksOwnership = /\\b(government|govt|state[- ]owned|public property|private property|owned by|ownership|property of|government property|government owned|private company|is it private|are you private|belong to)\\b/.test(identityText)
-    && /\\b(you|this|nova|company|property|owned|ownership|government|private|belong)\\b/.test(identityText);
-  if (asksOwnership) {
-    return json({
-      answer: "NOVA Engineering Universe is presented as a product of Nova Company and authored by Danny Wise, not as a government service. That describes the product’s stated origin; legal ownership of its code, brand, or other intellectual property depends on the applicable rights and agreements. The underlying AI model or hosting may be supplied by third-party services.",
-      assistant: "Engineering Formula & Design AI",
-      provider: "nova_identity_response",
-      sources: [],
-      researchRepositories: { attempted: false, status: {} }
-    }, 200);
-  }
-  if (asksCreator) {
-    return json({
-      answer: "This AI feature is part of NOVA Engineering Universe, created by Nova Company and authored by Danny Wise. The underlying AI model or hosting may be provided by third-party services.",
-      assistant: "Engineering Formula & Design AI",
-      provider: "nova_identity_response",
-      sources: [],
-      researchRepositories: { attempted: false, status: {} }
-    }, 200);
-  }
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
   const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
   let repositoryStatus = { attempted: false, status: {} };
