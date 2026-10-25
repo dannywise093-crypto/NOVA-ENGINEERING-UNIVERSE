@@ -317,6 +317,25 @@ function formatSearchContext(results) {
   const latestUserQueryRaw = meaningfulUserMessage?.content || task;
   const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
 
+  // Structured product knowledge and intent routing: answer identity/ownership questions directly,
+  // without forcing this attribution onto normal engineering questions or adding it to the model prompt.
+  const novaCompanyFacts = {
+    product: "NOVA Engineering Universe Formula AI",
+    company: "Nova Company",
+    author: "Danny Wise",
+    ceo: "Danny Wise"
+  };
+  const asksAboutCreator = /\b(who (?:made|created|developed|built|authored|owns|is behind) you|who (?:is|was) your (?:creator|developer|author|owner)|who developed (?:this|the) ai|who created (?:this|the) ai|who is danny wise|who is the ceo|who(?:'s| is) the ceo|ceo of nova|who runs nova)\b/i.test(latestUserQuery);
+  const asksAboutOwnership = /\b(government|government-owned|government property|private property|privately owned|who owns you|are you (?:owned|property)|is this (?:a )?government|belongs to (?:the )?government)\b/i.test(latestUserQuery);
+  if (asksAboutCreator || asksAboutOwnership) {
+    const answer = asksAboutOwnership
+      ? `${novaCompanyFacts.product} is a feature of ${novaCompanyFacts.company}, authored by ${novaCompanyFacts.author}, who is identified as CEO of Nova Engineering Company. Based on the project information, this is a company project, not a government-owned service. The underlying AI model or hosting services may be provided by third parties.`
+      : latestUserQuery.toLowerCase().includes("ceo") || latestUserQuery.toLowerCase().includes("runs nova") || latestUserQuery.toLowerCase().includes("who is danny wise")
+        ? `${novaCompanyFacts.author} is the CEO of Nova Engineering Company. The ${novaCompanyFacts.product} feature is part of ${novaCompanyFacts.company} and is authored by ${novaCompanyFacts.author}.`
+        : `This AI feature is part of ${novaCompanyFacts.product}, created by ${novaCompanyFacts.company} and authored by ${novaCompanyFacts.author}. Danny Wise is the CEO of Nova Engineering Company.`;
+    return json({ answer, assistant: "Engineering Formula & Design AI", provider: "nova_product_knowledge" }, 200);
+  }
+
   const isResearchQuery = /\b(research|peer[- ]reviewed|journal|paper|papers|studies|study|literature review|scientific evidence)\b/i.test(latestUserQuery);
   const searchQuery = (latestUserQuery.slice(0, 1400) + (isResearchQuery ? " peer-reviewed journal research publication date DOI" : "")).slice(0, 1800);
   let repositoryStatus = { attempted: false, status: {} };
