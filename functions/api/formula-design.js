@@ -313,8 +313,8 @@ function formatSearchContext(results) {
   let conversation = Array.isArray(body.messages) ? body.messages : [{ role: "user", content: task }];
   conversation = conversation.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim()).slice(-8).map(m => ({ role: m.role, content: m.content.slice(-3500) }));
   if (!conversation.length || conversation[conversation.length - 1].role !== "user") conversation.push({ role: "user", content: task });
-  const meaningfulUserMessage = [...conversation].reverse().find(m => m.role === "user" && m.content.trim().length > 20 && !/^(continue|retry|try again|go on|proceed)$/i.test(m.content.trim()));
-  const latestUserQueryRaw = meaningfulUserMessage?.content || task;
+  // Always route by the actual latest user turn. Do not reuse an older long prompt when the current question is short (for example, "Why?"), or identity answers can repeat unexpectedly.
+  const latestUserQueryRaw = [...conversation].reverse().find(m => m.role === "user")?.content || task;
   const latestUserQuery = latestUserQueryRaw.includes("User request:") ? latestUserQueryRaw.split("User request:").pop().trim() : latestUserQueryRaw;
 
   // Structured product knowledge and intent routing: answer identity/ownership questions directly,
